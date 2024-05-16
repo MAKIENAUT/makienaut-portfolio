@@ -25,9 +25,7 @@ export default function Home() {
 
   return (
     <main className={`w-full h-full flex-col border`}>
-      <article
-        className={`${jaro.className} flex-col justify-start text-center border`}
-      >
+      <article className={` flex-col justify-start text-center border`}>
         <h3 className="text-2xl">Welcome to my</h3>
         <div
           className={`flex justify-center border border-white w-full gap-3 align-middle text-7xl`}
