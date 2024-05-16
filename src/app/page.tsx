@@ -34,7 +34,6 @@ export default function Home() {
   return (
     <main className="flex flex-col items-center justify-center min-h-screen">
       <Link
-        href={"https://media1.tenor.com/m/NVS8DOBcunIAAAAC/yippee-cat.gif"}
         className="mb-8 text-center"
       >
         {text}
