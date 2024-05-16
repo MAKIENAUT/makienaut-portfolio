@@ -1,0 +1,98 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: 'Jaro';
+  src: url('../assets/fonts/Jaro/Jaro-Regular-VariableFont_opsz.ttf') format('truetype');
+  font-weight: normal;
+  font-style: normal;
+}
+
+:root {
+  --foreground-rgb: 0, 0, 0;
+  --background-start-rgb: 214, 219, 220;
+  --background-end-rgb: 255, 255, 255;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --foreground-rgb: 255, 255, 255;
+    --background-start-rgb: 0, 0, 0;
+    --background-end-rgb: 0, 0, 0;
+  }
+}
+
+html {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
+}
+
+body {
+  background-repeat: no-repeat;
+  background-position: center;
+}
+
+/* @media (max-width: 767px) {
+  body {
+    background-size: contain;
+    background-image: url(../../public/phone_background.png);
+  }
+}
+
+@media (min-width: 768px) {
+  body {
+    background-size: cover;
+    background-image: url(../../public/background.jpg);
+  }
+} */
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Transition for the button text */
+.button-transition {
+  transition: font-size 0.3s ease-in-out;
+}
+
+/* Transition for the links */
+.links-transition {
+  transition: width 0.3s ease-in-out;
+  overflow: hidden;
+}
+
+/* Animation for the links */
+@keyframes slide-in {
+  0% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slide-out {
+  0% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+}
+
+.links-enter {
+  animation: slide-in 0.3s ease-in-out;
+}
+
+.links-exit {
+  animation: slide-out 0.3s ease-in-out;
+}
