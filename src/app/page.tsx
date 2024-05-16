@@ -1,4 +1,5 @@
 "use client";
+import Link from "next/link";
 
 import { useState, useEffect } from "react";
 
@@ -32,7 +33,12 @@ export default function Home() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen">
-      <p className="mb-8 text-center">{text}</p>
+      <Link
+        href={"https://media1.tenor.com/m/NVS8DOBcunIAAAAC/yippee-cat.gif"}
+        className="mb-8 text-center"
+      >
+        {text}
+      </Link>
 
       <div className="flex space-x-4">
         <button
