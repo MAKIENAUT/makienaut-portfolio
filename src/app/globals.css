@@ -2,97 +2,162 @@
 @tailwind components;
 @tailwind utilities;
 
-@font-face {
-  font-family: 'Jaro';
-  src: url('../assets/fonts/Jaro/Jaro-Regular-VariableFont_opsz.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-}
-
 :root {
-  --foreground-rgb: 0, 0, 0;
-  --background-start-rgb: 214, 219, 220;
-  --background-end-rgb: 255, 255, 255;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --foreground-rgb: 255, 255, 255;
-    --background-start-rgb: 0, 0, 0;
-    --background-end-rgb: 0, 0, 0;
-  }
-}
-
-html {
-  color: rgb(var(--foreground-rgb));
-  background: linear-gradient(to bottom,
-      transparent,
-      rgb(var(--background-end-rgb))) rgb(var(--background-start-rgb));
-}
-
-body {
-  background-repeat: no-repeat;
-  background-position: center;
-}
-
-/* @media (max-width: 767px) {
-  body {
-    background-size: contain;
-    background-image: url(../../public/phone_background.png);
-  }
+  --foreground-rgb: 255, 255, 255;
+  --background-rgb: 0, 0, 0;
+  --primary: #ffd700;
+  --primary-dark: #ffcc00;
+  --secondary: #00fffc;
+  --tertiary: #fc00ff;
+  --nav-height: 64px;
 }
 
 @media (min-width: 768px) {
-  body {
-    background-size: cover;
-    background-image: url(../../public/background.jpg);
+  :root {
+    --nav-height: 72px;
   }
-} */
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-rgb));
+  min-height: 100vh;
+  position: relative;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image:
+    radial-gradient(circle at 20% 50%, rgba(255, 215, 0, 0.1) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(252, 0, 255, 0.05) 0%, transparent 50%),
+    radial-gradient(circle at 40% 20%, rgba(0, 255, 252, 0.05) 0%, transparent 50%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(to bottom, var(--primary), var(--primary-dark));
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
 
 @layer utilities {
   .text-balance {
     text-wrap: balance;
   }
+
+  .animate-typing {
+    animation: typing 2s steps(20), blink 0.5s step-end infinite alternate;
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 1s ease-in-out;
+  }
+
+  .backdrop-blur-sm {
+    backdrop-filter: blur(8px);
+  }
 }
 
-/* Transition for the button text */
-.button-transition {
-  transition: font-size 0.3s ease-in-out;
+@keyframes typing {
+  from {
+    width: 0;
+  }
+
+  to {
+    width: 100%;
+  }
 }
 
-/* Transition for the links */
-.links-transition {
-  transition: width 0.3s ease-in-out;
-  overflow: hidden;
+@keyframes blink {
+  50% {
+    border-color: transparent;
+  }
 }
 
-/* Animation for the links */
-@keyframes slide-in {
-  0% {
+@keyframes fadeIn {
+  from {
     opacity: 0;
-    transform: translateX(-100%);
+    transform: translateY(20px);
   }
-  100% {
+
+  to {
     opacity: 1;
-    transform: translateX(0);
+    transform: translateY(0);
   }
 }
 
-@keyframes slide-out {
-  0% {
-    opacity: 1;
-    transform: translateX(0);
-  }
+@keyframes float {
+
+  0%,
   100% {
-    opacity: 0;
-    transform: translateX(-100%);
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-10px);
   }
 }
 
-.links-enter {
-  animation: slide-in 0.3s ease-in-out;
+.gradient-text {
+  background: linear-gradient(135deg, var(--primary) 0%, #ff6b6b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-.links-exit {
-  animation: slide-out 0.3s ease-in-out;
+.hover-glow {
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.hover-glow::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: inherit;
+  filter: blur(20px);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  z-index: -1;
+}
+
+.hover-glow:hover::before {
+  opacity: 0.5;
+}
+
+@media (max-width: 768px) {
+  body::before {
+    background-image:
+      radial-gradient(circle at 50% 30%, rgba(255, 215, 0, 0.08) 0%, transparent 60%);
+  }
 }

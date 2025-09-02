@@ -12,7 +12,7 @@ const config: Config = {
         'x-150': '1.5',
       },
       fontSize: {
-        '9xl': '9rem', // Add a new font size class
+        '9xl': '9rem',
       },
       backgroundImage: {
         "gradient-radial": "radial-gradient(var(--tw-gradient-stops))",
@@ -37,25 +37,6 @@ const config: Config = {
             borderColor: "white",
           },
         },
-        glitchHover: {
-          "0%": {
-            textShadow: "4px 0 0 rgba(255, 0, 0, 0.9), -4px 0 0 rgba(0, 255, 0, 0.9)",
-          },
-          "5%": {
-            textShadow: "-4px 0 0 rgba(255, 0, 0, 0.9), 4px 0 0 rgba(0, 255, 0, 0.9)",
-          },
-          "10%": {
-            textShadow: "4px 0 0 rgba(255, 0, 0, 0.9), -4px 0 0 rgba(0, 255, 0, 0.9)",
-          },
-          "15%": {
-            textShadow: "-4px 0 0 rgba(255, 0, 0, 0.9), 4px 0 0 rgba(0, 255, 0, 0.9)",
-          },
-          "20%": {
-            textShadow: "4px 0 0 rgba(255, 0, 0, 0.9), -4px 0 0 rgba(0, 255, 0, 0.9)",
-          },
-          "25%": { textShadow: "normal" },
-          "100%": { textShadow: "normal" },
-        },
         slideRight: {
           "0%": {
             transform: "translateX(-100%)",
@@ -75,9 +56,8 @@ const config: Config = {
       },
       animation: {
         typing: "typing 2s steps(20) alternate, blink .7s infinite",
-        glitchHover: "glitchHover 5s infinite",
-        slideRight: "slideRight 0.5s ease-in-out", // Remove single quotes
-        slideLeft: "slideLeft 0.5s ease-in-out", // Remove single quotes
+        slideRight: "slideRight 0.5s ease-in-out",
+        slideLeft: "slideLeft 0.5s ease-in-out",
       },
     },
   },
