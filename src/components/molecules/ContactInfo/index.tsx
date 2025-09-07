@@ -18,7 +18,7 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
 }) => {
   const content = (
     <>
-      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-full flex items-center justify-center flex-shrink-0">
+      <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-brand-primary to-brand-primary-dark rounded-full flex items-center justify-center flex-shrink-0">
         <Icon color="black">{icon}</Icon>
       </div>
       <div className="text-left">
@@ -36,7 +36,7 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
     </>
   );
 
-  const baseClasses = `flex items-center gap-3 sm:gap-4 ${className}`;
+  const baseClasses = `flex items-center gap-gap-md ${className}`;
 
   return href ? (
     <a href={href} className={baseClasses}>

@@ -13,10 +13,10 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
   return (
     <section
       id="projects"
-      className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-black/50 ${className}`}
+      className={`py-section-y px-section-x bg-black/50 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 sm:mb-10 md:mb-12">
+        <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
             03. Portfolio
           </Typography>
@@ -25,7 +25,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gap-md">
           {projects.map((project) => (
             <ProjectCard key={project.id} project={project} />
           ))}

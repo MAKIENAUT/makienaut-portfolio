@@ -97,7 +97,8 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
     if (isFanOpen) {
       // Final fan position
       angle = startAngle - (arcSpan / (total - 1)) * index;
-      radius = 70; // Full radius when fan is open
+      // Use consistent radius across all devices
+      radius = 90;
     } else {
       // Initial collapsed position (all buttons start at center)
       angle = (startAngle + endAngle) / 2; // Center angle (135°)
@@ -111,75 +112,77 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
   };
 
   return (
-    <div 
-      className={`fixed z-50 transition-all duration-300 ease-out ${
-        isOpen 
-          ? "bottom-12 sm:bottom-16 right-12 sm:right-16" 
-          : "bottom-6 sm:bottom-8 right-6 sm:right-8"
-      } ${className}`}
-    >
-      {/* Navigation Items */}
-      <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2">
-        {navLinks.map((link, index) => {
-          const position = getRadialPosition(index, navLinks.length, isOpen);
-          const isActive = activeSection === link.id;
-          
-          return (
-            <div key={link.id} className="absolute">
-              <button
-                onClick={(e) => handleNavClick(e, link.href)}
-                className={`w-10 h-10 sm:w-11 sm:h-11 rounded-full border-2 transform hover:scale-110 ${
-                  isActive
-                    ? "bg-gradient-to-r from-yellow-400 to-orange-500 text-black border-yellow-400 shadow-lg scale-110"
-                    : "bg-gray-900/90 backdrop-blur-sm text-white border-gray-700 hover:border-yellow-400 hover:bg-gray-800"
-                } flex items-center justify-center shadow-xl transition-all duration-500 ease-out`}
-                style={{
-                  transform: `translate(${position.x - 22}px, ${position.y - 22}px) scale(${isOpen ? 1 : 0})`,
-                  transitionDelay: `${index * 100}ms`,
-                  opacity: isOpen ? 1 : 0,
-                }}
-                title={link.label}
-              >
-                <Icon size="sm" color={isActive ? "black" : "white"}>
-                  {navIcons[link.id as keyof typeof navIcons]}
-                </Icon>
-              </button>
-              
-              {/* Tooltip */}
-              <div
-                className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-200 pointer-events-none"
-                style={{
-                  transform: `translate(${position.x - 22}px, ${position.y - 52}px) translateX(-50%)`,
-                  opacity: isOpen ? 0 : 0, // Initially hidden, shows on hover
-                }}
-              >
-                {link.label}
-              </div>
-            </div>
-          );
-        })}
-      </div>
-
-      {/* Main FAB Button */}
-      <button
-        onClick={toggleMenu}
-        className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 text-black shadow-2xl flex items-center justify-center transition-all duration-300 hover:scale-110 active:scale-95 ${
-          isOpen ? "rotate-180" : ""
-        }`}
-        aria-label="Toggle navigation"
-      >
-        <Icon size="md" color="black">
-          <FaCompass />
-        </Icon>
-      </button>
-
+    <>
       {/* Background overlay when open */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm -z-10"
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
           onClick={() => setIsOpen(false)}
         />
       )}
-    </div>
+      
+      <div 
+        className={`fixed z-50 transition-all duration-300 ease-out ${
+          isOpen 
+            ? "bottom-16 right-16" 
+            : "bottom-8 right-8"
+        } ${className}`}
+      >
+        {/* Navigation Items */}
+        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -z-10">
+          {navLinks.map((link, index) => {
+            const position = getRadialPosition(index, navLinks.length, isOpen);
+            const isActive = activeSection === link.id;
+            
+            return (
+              <div key={link.id} className="absolute">
+                <button
+                  onClick={(e) => handleNavClick(e, link.href)}
+                  className={`w-12 h-12 rounded-full border-2 transform hover:scale-hover-lg ${
+                    isActive
+                      ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black border-brand-primary shadow-elevation-high scale-hover-lg"
+                      : "bg-gray-900/90 backdrop-blur-sm text-white border-gray-700 hover:border-brand-primary hover:bg-gray-800"
+                  } flex items-center justify-center shadow-elevation-high transition-all duration-300 ease-out`}
+                  style={{
+                    transform: `translate(${position.x - 24}px, ${position.y - 24}px) scale(${isOpen ? 1 : 0})`,
+                    transitionDelay: `${index * 60}ms`,
+                    opacity: isOpen ? 1 : 0,
+                  }}
+                  title={link.label}
+                >
+                  <Icon size="sm" color={isActive ? "black" : "white"}>
+                    {navIcons[link.id as keyof typeof navIcons]}
+                  </Icon>
+                </button>
+                
+                {/* Tooltip */}
+                <div
+                  className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-caption rounded-element whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                  style={{
+                    transform: `translate(${position.x - 24}px, ${position.y - 56}px) translateX(-50%)`,
+                    opacity: isOpen ? 0 : 0, // Initially hidden, shows on hover
+                  }}
+                >
+                  {link.label}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Main FAB Button */}
+        <button
+          onClick={toggleMenu}
+          className={`w-14 h-14 rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-highest flex items-center justify-center transition-all duration-300 hover:scale-hover-lg active:scale-95 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+          aria-label="Toggle navigation"
+        >
+          <Icon size="md" color="black">
+            <FaCompass />
+          </Icon>
+        </button>
+      </div>
+    </>
   );
 };

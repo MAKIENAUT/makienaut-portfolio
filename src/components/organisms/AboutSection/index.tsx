@@ -12,10 +12,10 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
   return (
     <section
       id="about"
-      className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-black/50 ${className}`}
+      className={`py-section-y px-section-x bg-black/50 ${className}`}
     >
       <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 sm:mb-10 md:mb-12">
+        <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
             01. Introduction
           </Typography>
@@ -24,8 +24,8 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 md:gap-10 lg:gap-12 items-center">
-          <div className="space-y-4 text-gray-300 text-sm sm:text-base lg:text-lg order-2 lg:order-1">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-gap-lg items-center">
+          <div className="space-y-gap-md text-gray-300 order-2 lg:order-1">
             <Typography
               variant="body"
               color="gray"
@@ -47,7 +47,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               Currently, I&apos;m a graduating student at{" "}
               <a
                 href="https://up.phinma.edu.ph/"
-                className="text-yellow-400 hover:underline inline-block"
+                className="text-brand-primary hover:underline inline-block"
               >
                 PHINMA - University of Pangasinan
               </a>
@@ -68,8 +68,8 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
           </div>
 
           <div className="relative order-1 lg:order-2">
-            <div className="aspect-square max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-full mx-auto bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 sm:p-8">
-              <div className="w-full h-full bg-gradient-to-r from-yellow-400/10 to-orange-500/10 rounded-xl flex items-center justify-center p-4 sm:p-6 md:p-8">
+            <div className="aspect-square max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-full mx-auto bg-gradient-to-br from-gray-800 to-gray-900 rounded-card-lg p-card-padding shadow-elevation-medium">
+              <div className="w-full h-full bg-gradient-to-r from-brand-primary/10 to-brand-primary-dark/10 rounded-card flex items-center justify-center p-card-padding">
                 <div className="relative w-full h-full">
                   <Image
                     src="/Orb-Weaver logo.png"

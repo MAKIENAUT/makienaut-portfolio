@@ -12,11 +12,11 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
   className = "",
 }) => {
   return (
-    <Card className={`p-4 sm:p-5 md:p-6 ${className}`}>
+    <Card className={`p-card-padding ${className}`}>
       <Typography
         variant="caption"
         color="yellow"
-        className="mb-1.5 sm:mb-2"
+        className="mb-gap-sm"
       >
         {experience.date}
       </Typography>
@@ -33,7 +33,7 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
       <Typography
         variant="body"
         color="gray"
-        className="mb-2 sm:mb-3"
+        className="mb-gap-sm"
       >
         {experience.company}
       </Typography>

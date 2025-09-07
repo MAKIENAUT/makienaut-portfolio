@@ -34,10 +34,10 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   return (
     <section
       id="contact"
-      className={`py-16 sm:py-20 md:py-24 px-4 sm:px-6 md:px-8 lg:px-12 xl:px-16 2xl:px-20 bg-black/50 ${className}`}
+      className={`py-section-y px-section-x bg-black/50 ${className}`}
     >
       <div className="max-w-4xl mx-auto text-center">
-        <div className="mb-8 sm:mb-10 md:mb-12">
+        <div className="mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
             05. What&apos;s Next?
           </Typography>
@@ -45,7 +45,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             variant="h2"
             color="white"
             font="spaceGrotesk"
-            className="mb-4 sm:mb-6"
+            className="mb-gap-md"
           >
             Get In Touch
           </Typography>

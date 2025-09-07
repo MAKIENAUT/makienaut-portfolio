@@ -25,12 +25,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         />
       </div>
 
-      <div className="p-4 sm:p-5 md:p-6">
+      <div className="p-card-padding">
         <Typography
           variant="h3"
           color="white"
           font="spaceGrotesk"
-          className="mb-2 sm:mb-3"
+          className="mb-gap-sm"
         >
           {project.title}
         </Typography>
@@ -39,12 +39,12 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           variant="body"
           color="gray"
           font="poppins"
-          className="mb-3 sm:mb-4 line-clamp-3"
+          className="mb-gap-md line-clamp-3"
         >
           {project.description}
         </Typography>
 
-        <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+        <div className="flex flex-wrap gap-gap-sm mb-gap-md">
           {project.tech.map((tech, index) => (
             <Badge key={index} variant="tech">
               {tech}
@@ -52,13 +52,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           ))}
         </div>
 
-        <div className="flex flex-wrap gap-3 sm:gap-4 text-xs sm:text-sm">
+        <div className="flex flex-wrap gap-gap-md text-caption">
           {project.liveUrl && (
             <a
               href={project.liveUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="text-yellow-400 hover:text-orange-500 transition-colors flex items-center gap-1.5"
+              className="text-brand-primary hover:text-brand-primary-dark transition-colors duration-300 flex items-center gap-gap-sm"
             >
               <Icon size="sm">
                 <FaExternalLinkAlt />
@@ -67,7 +67,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
             </a>
           )}
           {project.isPrivate ? (
-            <span className="text-gray-500 flex items-center gap-1.5">
+            <span className="text-gray-500 flex items-center gap-gap-sm">
               <Icon size="sm" color="gray">
                 <FaLock />
               </Icon>
@@ -76,7 +76,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           ) : (
             <a
               href={project.githubUrl}
-              className="text-yellow-400 hover:text-orange-500 transition-colors flex items-center gap-1.5"
+              className="text-brand-primary hover:text-brand-primary-dark transition-colors duration-300 flex items-center gap-gap-sm"
             >
               <Icon size="sm">
                 <FaGithub />

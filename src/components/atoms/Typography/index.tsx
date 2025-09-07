@@ -23,20 +23,20 @@ export const Typography: React.FC<TypographyProps> = ({
   };
 
   const variantClasses = {
-    h1: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl font-bold leading-tight",
-    h2: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-bold",
-    h3: "text-lg sm:text-xl md:text-2xl font-bold",
-    h4: "text-base sm:text-lg font-semibold",
-    body: "text-sm sm:text-base",
-    caption: "text-xs sm:text-sm",
-    overline: "text-xs sm:text-sm uppercase tracking-wider",
+    h1: "text-display-xl font-bold leading-tight",
+    h2: "text-display-lg font-bold",
+    h3: "text-heading-lg font-bold",
+    h4: "text-heading-md font-semibold",
+    body: "text-body-lg",
+    caption: "text-caption",
+    overline: "text-caption uppercase tracking-wider",
   };
 
   const colorClasses = {
     white: "text-white",
     gray: "text-gray-300",
-    yellow: "text-yellow-400",
-    gradient: "bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent",
+    yellow: "text-brand-primary",
+    gradient: "bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent",
   };
 
   const Component = variant.startsWith("h") ? variant : "p";

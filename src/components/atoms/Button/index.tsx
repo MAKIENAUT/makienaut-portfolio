@@ -17,18 +17,18 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   icon,
 }) => {
-  const baseClasses = "font-semibold rounded-full transition-all duration-300 flex items-center justify-center gap-2";
+  const baseClasses = "font-semibold rounded-button transition-all duration-300 flex items-center justify-center gap-sm";
   
   const variantClasses = {
-    primary: "bg-gradient-to-r from-yellow-400 to-orange-500 text-black hover:scale-105",
+    primary: "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black hover:scale-hover-md",
     secondary: "bg-gray-800 text-white hover:bg-gray-700",
-    outline: "border-2 border-yellow-400 text-yellow-400 hover:bg-yellow-400 hover:text-black",
+    outline: "border-2 border-brand-primary text-brand-primary hover:bg-brand-primary hover:text-black",
   };
   
   const sizeClasses = {
-    sm: "px-4 py-2 text-sm",
-    md: "px-5 sm:px-6 py-2.5 sm:py-3 text-sm sm:text-base",
-    lg: "px-6 py-3 text-base",
+    sm: "px-4 py-2 text-caption",
+    md: "px-5 sm:px-6 py-2.5 sm:py-3 text-body-md",
+    lg: "px-6 py-3 text-body-lg",
   };
 
   return (

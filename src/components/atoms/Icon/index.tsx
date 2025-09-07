@@ -16,22 +16,22 @@ export const Icon: React.FC<IconProps> = ({
   hover = false,
 }) => {
   const sizeClasses = {
-    sm: "text-sm",
-    md: "text-base",
-    lg: "text-xl",
-    xl: "text-2xl sm:text-3xl md:text-4xl lg:text-5xl",
+    sm: "text-caption",
+    md: "text-body-lg",
+    lg: "text-heading-md",
+    xl: "text-display-md",
   };
 
   const colorClasses = {
     white: "text-white",
-    yellow: "text-yellow-400",
-    orange: "text-orange-500",
+    yellow: "text-brand-primary",
+    orange: "text-brand-primary-dark",
     gray: "text-gray-400",
     black: "text-black",
   };
 
   const hoverClasses = hover
-    ? "group-hover:text-orange-500 transition-colors"
+    ? "group-hover:text-brand-primary-dark transition-colors duration-300"
     : "";
 
   return (
