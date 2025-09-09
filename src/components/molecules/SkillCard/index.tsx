@@ -29,7 +29,7 @@ export const SkillCard: React.FC<SkillCardProps> = ({
       <div className="mb-gap-sm">
         <Icon
           size="xl"
-          color={isLearning ? "cyan" : "yellow"}
+          color={isLearning ? "orange" : "yellow"}
           hover={true}
         >
           {skill.icon}
