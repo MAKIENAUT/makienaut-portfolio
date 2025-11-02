@@ -5,56 +5,40 @@ import { Skill } from "@/types";
 interface SkillCardProps {
   skill: Skill;
   className?: string;
-  isLearning?: boolean;
 }
 
 export const SkillCard: React.FC<SkillCardProps> = ({
   skill,
   className = "",
-  isLearning = false,
 }) => {
   return (
     <Card
-      className={`p-card-padding text-center hover:scale-hover-md cursor-pointer group relative ${
-        isLearning ? 'border-brand-secondary/30' : ''
-      } ${className}`}
+      className={`p-card-padding text-center hover:scale-hover-sm transition-all duration-300 cursor-pointer group relative overflow-hidden ${className}`}
     >
-      {isLearning && (
-        <div className="absolute -top-2 -right-2">
-          <div className="bg-brand-secondary text-black px-2 py-1 rounded-full text-xs font-semibold">
-            Learning
+      <div className="absolute inset-0 bg-gradient-to-br from-brand-primary/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+
+      <div className="relative z-low">
+        <div className="mb-gap-md flex justify-center">
+          <div className="p-4 rounded-card bg-gray-800/50 group-hover:bg-gray-800 transition-colors duration-300">
+            <Icon
+              size="xl"
+              color="yellow"
+              hover={true}
+            >
+              {skill.icon}
+            </Icon>
           </div>
         </div>
-      )}
-      <div className="mb-gap-sm">
-        <Icon
-          size="xl"
-          color={isLearning ? "orange" : "yellow"}
-          hover={true}
+
+        <Typography
+          variant="body"
+          color="white"
+          font="poppins"
+          className="font-medium tracking-wide"
         >
-          {skill.icon}
-        </Icon>
+          {skill.name}
+        </Typography>
       </div>
-      <Typography
-        variant="body"
-        color="white"
-        font="poppins"
-        className="font-medium"
-      >
-        {skill.name}
-      </Typography>
-      {isLearning && (
-        <div className="mt-2">
-          <div className="w-full bg-gray-700 rounded-full h-2">
-            <div 
-              className="bg-gradient-to-r from-brand-secondary to-brand-tertiary h-2 rounded-full animate-pulse"
-              style={{
-                width: `${Math.floor(Math.random() * 40) + 30}%`
-              }}
-            ></div>
-          </div>
-        </div>
-      )}
     </Card>
   );
 };

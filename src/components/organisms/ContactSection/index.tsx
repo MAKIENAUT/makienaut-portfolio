@@ -6,8 +6,6 @@ import {
   FaMapMarkerAlt,
   FaGithub,
   FaLinkedinIn,
-  FaInstagram,
-  FaTwitter,
   FaFacebookMessenger,
 } from "react-icons/fa";
 import { SocialLink as SocialLinkType } from "@/types";
@@ -22,8 +20,6 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   const socialLinks: SocialLinkType[] = [
     { icon: <FaGithub />, href: "https://github.com", label: "GitHub" },
     { icon: <FaLinkedinIn />, href: "https://linkedin.com", label: "LinkedIn" },
-    { icon: <FaInstagram />, href: "https://instagram.com", label: "Instagram" },
-    { icon: <FaTwitter />, href: "https://twitter.com", label: "Twitter" },
     {
       icon: <FaFacebookMessenger />,
       href: "https://m.me/mcray.escoto",

@@ -17,7 +17,7 @@ export const Button: React.FC<ButtonProps> = ({
   className = "",
   icon,
 }) => {
-  const baseClasses = "font-semibold rounded-button transition-all duration-300 flex items-center justify-center gap-sm";
+  const baseClasses = "font-semibold rounded-button transition-all duration-300 flex items-center justify-center gap-gap-sm";
   
   const variantClasses = {
     primary: "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black hover:scale-hover-md",
