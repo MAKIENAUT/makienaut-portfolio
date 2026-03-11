@@ -1,6 +1,5 @@
 import React from "react";
-import Image from "next/image";
-import { Typography } from "@/components/atoms";
+import { Typography, Badge } from "@/components/atoms";
 
 interface AboutSectionProps {
   className?: string;
@@ -9,6 +8,13 @@ interface AboutSectionProps {
 export const AboutSection: React.FC<AboutSectionProps> = ({
   className = "",
 }) => {
+  const strengths = [
+    "React.js and Next.js delivery",
+    "Laravel and Express.js backends",
+    "Project coordination and client communication",
+    "DevOps-aware deployment workflows",
+  ];
+
   return (
     <section
       id="about"
@@ -32,11 +38,9 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               font="poppins"
               className="leading-relaxed"
             >
-              Tech and the Internet have always fascinated me. During the
-              pandemic, I had a voluntary mentorship that introduced me to
-              JavaScript - my first programming language. Learning it was a
-              &ldquo;Brain Rewire&rdquo; moment that sparked my deep love for
-              programming.
+              I earned my Bachelor of Science in Information Technology with a specialization
+              in Web Development from PHINMA University of Pangasinan in June 2024. Since then,
+              I&apos;ve been building on that foundation through enterprise, freelance, and product work.
             </Typography>
             <Typography
               variant="body"
@@ -44,40 +48,73 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
               font="poppins"
               className="leading-relaxed"
             >
-              Currently, I&apos;m a graduating student at{" "}
+              My work spans front-end implementation, middleware integration, full-stack
+              delivery, QA, and project management. That range lets me contribute beyond code:
+              I can move between technical execution, team coordination, and client-facing problem solving.
+            </Typography>
+            <Typography
+              variant="body"
+              color="gray"
+              font="poppins"
+              className="leading-relaxed"
+            >
+              I&apos;m currently based in Pasig City, Metro Manila and working as a Mid-Level Full Stack
+              Developer at{" "}
               <a
-                href="https://up.phinma.edu.ph/"
+                href="https://services.global.ntt/"
                 className="text-brand-primary hover:underline inline-block"
+                target="_blank"
+                rel="noopener noreferrer"
               >
-                PHINMA - University of Pangasinan
+                NTT Limited Philippines Branch
               </a>
-              , pursuing internship opportunities. I lead my team as Project
-              Manager for our Capstone Project, which has helped me land several
-              small-scale projects.
+              , where I help build scalable web solutions for enterprise-facing teams.
             </Typography>
-            <Typography
-              variant="body"
-              color="gray"
-              font="poppins"
-              className="leading-relaxed"
-            >
-              Aspiring to be a Tech Entrepreneur, I founded &ldquo;Orb-Weaver&rdquo; - a
-              small start-up dedicated to helping growing developers like myself
-              build their digital presence.
-            </Typography>
+            <div className="flex flex-wrap gap-3 pt-2">
+              {strengths.map((strength) => (
+                <Badge key={strength} variant="tech">
+                  {strength}
+                </Badge>
+              ))}
+            </div>
           </div>
 
           <div className="relative order-1 lg:order-2">
-            <div className="aspect-square max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-full mx-auto bg-gradient-to-br from-gray-800 to-gray-900 rounded-card-lg p-card-padding shadow-elevation-medium">
-              <div className="w-full h-full bg-gradient-to-r from-brand-primary/10 to-brand-primary-dark/10 rounded-card flex items-center justify-center p-card-padding">
-                <div className="relative w-full h-full">
-                  <Image
-                    src="/Orb-Weaver logo.png"
-                    alt="Orb-Weaver Logo"
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 400px"
-                  />
+            <div className="rounded-card-lg border border-white/10 bg-gradient-to-br from-gray-900 to-black p-card-padding shadow-elevation-medium">
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="rounded-card border border-brand-primary/20 bg-brand-primary/5 p-5">
+                  <Typography variant="caption" color="yellow" className="mb-2 block">
+                    Education
+                  </Typography>
+                  <Typography variant="h4" color="white" font="spaceGrotesk" className="mb-2">
+                    BS Information Technology
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed">
+                    Specializing in Web Development
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="mt-2 block leading-relaxed">
+                    PHINMA University of Pangasinan
+                  </Typography>
+                </div>
+                <div className="rounded-card border border-white/10 bg-white/5 p-5">
+                  <Typography variant="caption" color="yellow" className="mb-2 block">
+                    Communication
+                  </Typography>
+                  <Typography variant="h4" color="white" font="spaceGrotesk" className="mb-2">
+                    EF SET C1 Advanced
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed">
+                    Strong English proficiency for remote collaboration and client communication.
+                  </Typography>
+                </div>
+                <div className="rounded-card border border-white/10 bg-white/5 p-5 sm:col-span-2">
+                  <Typography variant="caption" color="yellow" className="mb-2 block">
+                    Working Style
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed">
+                    I work best in environments where ownership matters: clarify the requirement,
+                    ship the feature, document the decision, and keep the handoff clean for the next person.
+                  </Typography>
                 </div>
               </div>
             </div>

@@ -1,17 +1,30 @@
 import React from "react";
-import { Typography } from "@/components/atoms";
-import { SkillCard } from "@/components/molecules";
+import { Card, Typography, Badge } from "@/components/atoms";
 import {
+  FaAws,
   FaDatabase,
+  FaFigma,
+  FaGitAlt,
   FaReact,
   FaWordpress,
-  FaNodeJs,
   FaLaravel,
-  FaPython,
   FaDocker,
+  FaPhp,
 } from "react-icons/fa";
-import { SiNextdotjs, SiTailwindcss, SiTypescript, SiMysql } from "react-icons/si";
-import { Skill } from "@/types";
+import {
+  SiCloudflare,
+  SiExpress,
+  SiGo,
+  SiJavascript,
+  SiMongodb,
+  SiMysql,
+  SiNextdotjs,
+  SiNotion,
+  SiPostgresql,
+  SiTailwindcss,
+  SiTypescript,
+  SiVercel,
+} from "react-icons/si";
 
 interface SkillsSectionProps {
   className?: string;
@@ -20,17 +33,53 @@ interface SkillsSectionProps {
 export const SkillsSection: React.FC<SkillsSectionProps> = ({
   className = "",
 }) => {
-  const skills: Skill[] = [
-    { id: 1, name: "React", icon: <FaReact /> },
-    { id: 2, name: "Next.js", icon: <SiNextdotjs /> },
-    { id: 3, name: "TypeScript", icon: <SiTypescript /> },
-    { id: 4, name: "Tailwind CSS", icon: <SiTailwindcss /> },
-    { id: 5, name: "Node.js", icon: <FaNodeJs /> },
-    { id: 6, name: "Laravel", icon: <FaLaravel /> },
-    { id: 7, name: "Python", icon: <FaPython /> },
-    { id: 8, name: "MySQL", icon: <SiMysql /> },
-    { id: 9, name: "Docker", icon: <FaDocker /> },
-    { id: 10, name: "WordPress", icon: <FaWordpress /> },
+  const skillGroups = [
+    {
+      title: "Front End",
+      description: "Production UI work with modern React-based stacks.",
+      items: [
+        { name: "React.js", icon: <FaReact /> },
+        { name: "Next.js", icon: <SiNextdotjs /> },
+        { name: "TypeScript", icon: <SiTypescript /> },
+        { name: "JavaScript", icon: <SiJavascript /> },
+        { name: "Tailwind CSS", icon: <SiTailwindcss /> },
+      ],
+    },
+    {
+      title: "Back End",
+      description: "Practical APIs, business logic, and full-stack application support.",
+      items: [
+        { name: "Laravel", icon: <FaLaravel /> },
+        { name: "Express.js", icon: <SiExpress /> },
+        { name: "PHP", icon: <FaPhp /> },
+        { name: "SQL", icon: <FaDatabase /> },
+        { name: "Go", icon: <SiGo /> },
+      ],
+    },
+    {
+      title: "Data and Delivery",
+      description: "Deployment-aware workflow across infrastructure and databases.",
+      items: [
+        { name: "MySQL", icon: <SiMysql /> },
+        { name: "PostgreSQL", icon: <SiPostgresql /> },
+        { name: "MongoDB", icon: <SiMongodb /> },
+        { name: "Docker", icon: <FaDocker /> },
+        { name: "Vercel", icon: <SiVercel /> },
+        { name: "AWS", icon: <FaAws /> },
+        { name: "Cloudflare", icon: <SiCloudflare /> },
+        { name: "Git", icon: <FaGitAlt /> },
+      ],
+    },
+    {
+      title: "Design and Ops",
+      description: "Tools I use to keep delivery organized and client-ready.",
+      items: [
+        { name: "Figma", icon: <FaFigma /> },
+        { name: "WordPress", icon: <FaWordpress /> },
+        { name: "Notion", icon: <SiNotion /> },
+        { name: "Monday.com", icon: <FaDatabase /> },
+      ],
+    },
   ];
 
   return (
@@ -46,11 +95,44 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Skills & Tools
           </Typography>
+          <Typography
+            variant="body"
+            color="gray"
+            font="poppins"
+            className="mx-auto mt-4 max-w-2xl leading-relaxed"
+          >
+            These are the technologies and workflows I use most often across enterprise delivery,
+            freelance builds, and full-stack product work.
+          </Typography>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-gap-md md:gap-gap-lg">
-          {skills.map((skill) => (
-            <SkillCard key={skill.id} skill={skill} />
+        <div className="grid gap-gap-md lg:grid-cols-2">
+          {skillGroups.map((group) => (
+            <Card key={group.title} className="p-card-padding">
+              <Typography variant="h3" color="white" font="spaceGrotesk" className="mb-2">
+                {group.title}
+              </Typography>
+              <Typography
+                variant="caption"
+                color="gray"
+                font="poppins"
+                className="mb-4 block leading-relaxed"
+              >
+                {group.description}
+              </Typography>
+              <div className="flex flex-wrap gap-3">
+                {group.items.map((item) => (
+                  <Badge
+                    key={item.name}
+                    variant="tech"
+                    className="gap-2 px-3 py-2 text-body-sm bg-white/5 text-gray-100 border-white/10 hover:bg-white/10"
+                  >
+                    <span className="text-brand-primary">{item.icon}</span>
+                    {item.name}
+                  </Badge>
+                ))}
+              </div>
+            </Card>
           ))}
         </div>
       </div>

@@ -5,27 +5,27 @@ export const projects: Project[] = [
     id: 1,
     title: "West Migration Agency",
     description:
-      "A modern website renovation for a US-based migration agency, featuring improved aesthetics and enhanced user experience for international job opportunities.",
+      "Led the delivery of a capstone-grade migration platform using Next.js, TypeScript, Express.js, PostgreSQL, and Docker while coordinating product requirements and operations support.",
     image: "/wma.png",
-    tech: ["JavaScript", "PHP", "MySQL", "HTML/CSS"],
+    tech: ["Next.js", "TypeScript", "Express.js", "PostgreSQL", "Docker"],
     liveUrl: "https://westmigrationagency.com",
-    githubUrl: "#",
+    isPrivate: true,
   },
   {
     id: 2,
     title: "Athena Travel & Tours",
     description:
-      "Comprehensive travel agency website for booking flights and exploring Pangasinan's local scenery, with integrated booking system.",
+      "Designed and shipped a custom full-stack travel website for a Pangasinan-based agency, handling planning, interface design, and end-to-end implementation.",
     image: "/athena.png",
-    tech: ["JavaScript", "PHP", "MySQL", "Bootstrap"],
+    tech: ["HTML", "CSS", "JavaScript", "PHP", "Figma"],
     liveUrl: "https://athenatraveltours.com",
-    githubUrl: "#",
+    isPrivate: true,
   },
   {
     id: 3,
     title: "PHINMA-UPang Voting System",
     description:
-      "Online voting platform commissioned by APEC for SSG and SSC council elections, featuring real-time tallying and student directory.",
+      "Built an online voting platform for student council elections with real-time tallying, directory support, and a workflow suited for campus-wide usage.",
     image: "/upang.png",
     tech: ["JavaScript", "PHP", "MySQL", "Chart.js"],
     isPrivate: true,
@@ -35,27 +35,43 @@ export const projects: Project[] = [
 export const experiences: Experience[] = [
   {
     id: 1,
-    date: "August 2022 - Present",
-    title: "Project Manager / Backend Developer",
-    company: "West Migration Agency",
+    date: "June 2024 - Present",
+    title: "Mid-Level Full Stack Developer",
+    company: "NTT Limited Philippines Branch",
     description:
-      "Led development team in creating and maintaining a comprehensive migration agency platform. Implemented backend solutions and managed project timelines.",
+      "Developing enterprise web solutions with React.js, Next.js, and Laravel while collaborating with cross-functional teams on scalable delivery and code quality.",
   },
   {
     id: 2,
-    date: "September 2023 - October 2023",
-    title: "Full Stack Developer",
-    company: "Athena Travel & Tours",
+    date: "June 2024 - October 2024",
+    title: "UI/UX Manager | QA",
+    company: "Upwork",
     description:
-      "Developed complete travel booking system with integrated payment processing and real-time availability checking.",
+      "Managed design and QA workflows for client projects, including a WordPress revamp and a Next.js portfolio delivery deployed on Vercel.",
   },
   {
     id: 3,
-    date: "2023 - Present",
-    title: "Founder & Lead Developer",
-    company: "Orb-Weaver",
+    date: "December 2023 - March 2024",
+    title: "Middleware / Front-End Developer Intern",
+    company: "Boom Technologies Inc.",
     description:
-      "Founded a start-up focused on helping emerging developers build their digital presence. Managing multiple client projects and mentoring junior developers.",
+      "Built middleware and front-end integrations for SwiftForm, an AI-powered form builder using Next.js, TypeScript, Python/Flask, and OpenAI services.",
+  },
+  {
+    id: 4,
+    date: "June 2022 - February 2025",
+    title: "Project Manager / Full-Stack Developer",
+    company: "West Migration Agency",
+    description:
+      "Led platform development and project operations across engineering, documentation, content, and workflow management using Notion and Monday.com.",
+  },
+  {
+    id: 5,
+    date: "August 2023 - September 2023",
+    title: "Project Manager / Full-Stack Developer",
+    company: "Athena Travels and Tours Agency",
+    description:
+      "Handled project planning, client communication, design, and development for a custom full-stack travel website built with HTML, CSS, JavaScript, and PHP.",
   },
 ];
 

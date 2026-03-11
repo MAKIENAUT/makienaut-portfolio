@@ -1,6 +1,6 @@
 import React from "react";
-import { Typography } from "@/components/atoms";
-import { ContactInfo, SocialLink } from "@/components/molecules";
+import { Icon, Typography } from "@/components/atoms";
+import { SocialLink } from "@/components/molecules";
 import {
   FaEnvelope,
   FaMapMarkerAlt,
@@ -18,8 +18,13 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
   className = "",
 }) => {
   const socialLinks: SocialLinkType[] = [
-    { icon: <FaGithub />, href: "https://github.com", label: "GitHub" },
-    { icon: <FaLinkedinIn />, href: "https://linkedin.com", label: "LinkedIn" },
+    {
+      icon: <FaEnvelope />,
+      href: "mailto:mcrayescoto@gmail.com",
+      label: "Email",
+    },
+    { icon: <FaGithub />, href: "https://github.com/makienaut", label: "GitHub" },
+    { icon: <FaLinkedinIn />, href: "https://linkedin.com/in/makienaut", label: "LinkedIn" },
     {
       icon: <FaFacebookMessenger />,
       href: "https://m.me/mcray.escoto",
@@ -32,7 +37,7 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
       id="contact"
       className={`py-section-y px-section-x bg-black/50 ${className}`}
     >
-      <div className="max-w-4xl mx-auto text-center">
+      <div className="max-w-5xl mx-auto text-center">
         <div className="mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
             05. What&apos;s Next?
@@ -51,35 +56,38 @@ export const ContactSection: React.FC<ContactSectionProps> = ({
             font="poppins"
             className="max-w-2xl mx-auto"
           >
-            I&apos;m always seeking new opportunities and exciting projects!
-            Whether you have a question or just want to say hello, I&apos;ll do
-            my best to get back to you!
+            If you need a developer who can handle implementation, communicate clearly,
+            and move a project forward without much friction, send me a message.
+            I&apos;m open to full-time roles, part-time roles, contract work, and freelance builds.
           </Typography>
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-center items-center gap-6 sm:gap-8 mb-8 sm:mb-10 md:mb-12">
-          <ContactInfo
-            icon={<FaEnvelope />}
-            label="Email"
-            value="mcrayescoto@gmail.com"
-            href="mailto:mcrayescoto@gmail.com"
-          />
-          <ContactInfo
-            icon={<FaMapMarkerAlt />}
-            label="Location"
-            value="Pangasinan, Philippines"
-          />
-        </div>
-
-        <div className="flex justify-center gap-3 sm:gap-4">
-          {socialLinks.map((social, index) => (
-            <SocialLink
-              key={index}
-              href={social.href}
-              icon={social.icon}
-              label={social.label}
-            />
-          ))}
+        <div className="mx-auto mb-8 flex w-full max-w-4xl flex-wrap items-center justify-center gap-4 sm:mb-10 md:mb-12">
+          <div className="flex items-center justify-center gap-3 rounded-full border border-gray-800 bg-gray-900/45 px-3 py-2 backdrop-blur-sm sm:gap-4">
+            {socialLinks.map((social, index) => (
+              <SocialLink
+                key={index}
+                href={social.href}
+                icon={social.icon}
+                label={social.label}
+              />
+            ))}
+          </div>
+          <div className="flex items-center gap-3 rounded-full border border-gray-800 bg-gray-900/45 px-4 py-2 backdrop-blur-sm">
+            <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark sm:h-12 sm:w-12">
+              <Icon color="black">
+                <FaMapMarkerAlt />
+              </Icon>
+            </div>
+            <div className="text-left">
+              <Typography variant="caption" color="gray">
+                Location
+              </Typography>
+              <Typography variant="body" color="white" className="sm:whitespace-nowrap">
+                Pasig City, Metro Manila
+              </Typography>
+            </div>
+          </div>
         </div>
       </div>
     </section>

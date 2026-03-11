@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { Icon } from "@/components/atoms";
 import {
   FaCompass,
@@ -20,8 +20,10 @@ interface FloatingActionNavigationProps {
 export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> = ({
   className = "",
 }) => {
+  const compassRotations = [12, 42, 72, 102, 132, 162];
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
+  const pendingSectionRef = useRef<string | null>(null);
 
   const navLinks: NavLink[] = useMemo(
     () => [
@@ -46,26 +48,51 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
 
   useEffect(() => {
     const handleScroll = () => {
-      const sections = navLinks.map((link) => link.id);
-      const scrollPosition = window.scrollY + 100;
+      const viewportMarker = window.scrollY + window.innerHeight * 0.35;
+      let currentSection = navLinks[0]?.id ?? "home";
 
-      for (const section of sections) {
-        const element = document.getElementById(section);
-        if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (
-            scrollPosition >= offsetTop &&
-            scrollPosition < offsetTop + offsetHeight
-          ) {
-            setActiveSection(section);
-            break;
-          }
+      for (const link of navLinks) {
+        const element = document.getElementById(link.id);
+
+        if (!element) {
+          continue;
+        }
+
+        const { offsetTop, offsetHeight } = element;
+
+        if (viewportMarker >= offsetTop) {
+          currentSection = link.id;
+        }
+
+        if (viewportMarker >= offsetTop && viewportMarker < offsetTop + offsetHeight) {
+          currentSection = link.id;
+          break;
         }
       }
+
+      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 8) {
+        currentSection = navLinks[navLinks.length - 1]?.id ?? currentSection;
+      }
+
+      if (pendingSectionRef.current) {
+        if (currentSection !== pendingSectionRef.current) {
+          return;
+        }
+
+        pendingSectionRef.current = null;
+      }
+
+      setActiveSection(currentSection);
     };
 
+    handleScroll();
     window.addEventListener("scroll", handleScroll);
-    return () => window.removeEventListener("scroll", handleScroll);
+    window.addEventListener("resize", handleScroll);
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener("resize", handleScroll);
+    };
   }, [navLinks]);
 
   const handleNavClick = (
@@ -76,40 +103,57 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
     const targetId = href.replace("#", "");
     const element = document.getElementById(targetId);
     if (element) {
+      pendingSectionRef.current = targetId;
+      setActiveSection(targetId);
       element.scrollIntoView({ behavior: "smooth" });
     }
     setIsOpen(false);
   };
 
   const toggleMenu = () => {
-    setIsOpen(!isOpen);
+    setIsOpen((currentState) => !currentState);
   };
 
-  // Calculate positions for radial menu (150° arc from 210° to 60°)
-  const getRadialPosition = (index: number, total: number, isFanOpen: boolean = true) => {
-    // Create a 150° arc from 210° to 60°
-    const startAngle = 210; // Start angle
-    const endAngle = 60; // End angle
-    const arcSpan = startAngle - endAngle; // 150 degrees
-    
-    let angle, radius;
-    
+  const getNavAngle = (index: number, total: number) => {
+    const startAngle = 210;
+    const endAngle = 60;
+    const arcSpan = startAngle - endAngle;
+
+    return total > 1 ? startAngle - (arcSpan / (total - 1)) * index : 135;
+  };
+
+  const getRadialPosition = (
+    index: number,
+    total: number,
+    isFanOpen: boolean = true
+  ) => {
+    let angle = getNavAngle(index, total);
+    let radius;
+
     if (isFanOpen) {
       // Final fan position
-      angle = startAngle - (arcSpan / (total - 1)) * index;
-      // Use consistent radius across all devices
-      radius = 90;
+      // Push buttons farther from the hub so they separate more along the arc
+      radius = 118;
     } else {
-      // Initial collapsed position (all buttons start at center)
-      angle = (startAngle + endAngle) / 2; // Center angle (135°)
-      radius = 0; // All buttons start at center
+      // Rest indicator dots on the edge of the main FAB
+      radius = 42;
     }
-    
+
     const radian = (angle * Math.PI) / 180;
-    const x = Math.cos(radian) * radius;
-    const y = -Math.sin(radian) * radius; // Up direction (negative y)
-    return { x, y };
+
+    return {
+      x: Math.cos(radian) * radius,
+      y: -Math.sin(radian) * radius,
+    };
   };
+
+  const activeIndex = navLinks.findIndex((link) => link.id === activeSection);
+  const compassRotation =
+    compassRotations[activeIndex >= 0 ? activeIndex : 0] ?? compassRotations[0];
+
+  useEffect(() => {
+    console.log("Compass icon rotation:", compassRotation);
+  }, [compassRotation]);
 
   return (
     <>
@@ -121,50 +165,70 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
         />
       )}
       
-      <div 
-        className={`fixed z-50 transition-all duration-300 ease-out ${
-          isOpen 
-            ? "bottom-16 right-16" 
-            : "bottom-8 right-8"
+      <div
+        className={`fixed bottom-8 right-8 z-50 h-16 w-16 overflow-visible transition-transform duration-300 ease-out md:bottom-20 md:right-20 ${
+          isOpen
+            ? "-translate-x-12 -translate-y-12 md:translate-x-0 md:translate-y-0"
+            : "translate-x-0 translate-y-0"
         } ${className}`}
       >
         {/* Navigation Items */}
-        <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 -z-10">
+        <div
+          id="floating-navigation-menu"
+          className="pointer-events-none absolute inset-0 z-10 overflow-visible"
+        >
           {navLinks.map((link, index) => {
-            const position = getRadialPosition(index, navLinks.length, isOpen);
             const isActive = activeSection === link.id;
+            const position = getRadialPosition(index, navLinks.length, isOpen);
             
             return (
-              <div key={link.id} className="absolute">
+              <div
+                key={link.id}
+                className={`absolute right-1/2 bottom-1/2 transition-all duration-300 ease-out ${
+                  isOpen ? "pointer-events-auto" : "pointer-events-none"
+                }`}
+                style={{
+                  marginRight: "-28px",
+                  marginBottom: "-28px",
+                  transform: `translate(${position.x}px, ${position.y}px) scale(${
+                    isOpen ? 1 : 0.18
+                  })`,
+                  transitionDelay: isOpen ? `${index * 50}ms` : "0ms",
+                }}
+              >
                 <button
                   onClick={(e) => handleNavClick(e, link.href)}
-                  className={`w-12 h-12 rounded-full border-2 transform hover:scale-hover-lg ${
-                    isActive
-                      ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black border-brand-primary shadow-elevation-high scale-hover-lg"
-                      : "bg-gray-900/90 backdrop-blur-sm text-white border-gray-700 hover:border-brand-primary hover:bg-gray-800"
-                  } flex items-center justify-center shadow-elevation-high transition-all duration-300 ease-out`}
-                  style={{
-                    transform: `translate(${position.x - 24}px, ${position.y - 24}px) scale(${isOpen ? 1 : 0})`,
-                    transitionDelay: `${index * 60}ms`,
-                    opacity: isOpen ? 1 : 0,
-                  }}
+                  className={`group relative flex h-14 w-14 items-center justify-center rounded-full border-2 transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out ${
+                    isOpen
+                      ? isActive
+                        ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black border-brand-primary shadow-elevation-high hover:scale-hover-lg"
+                        : "bg-gray-900/90 backdrop-blur-sm text-white border-gray-700 shadow-elevation-high hover:border-brand-primary hover:bg-gray-800 hover:scale-hover-lg"
+                      : isActive
+                        ? "border-white/80 bg-white text-transparent shadow-none"
+                        : "border-white/20 bg-brand-primary/90 text-transparent shadow-none"
+                  }`}
                   title={link.label}
+                  aria-label={`Go to ${link.label}`}
+                  aria-current={isActive ? "page" : undefined}
+                  tabIndex={isOpen ? 0 : -1}
                 >
-                  <Icon size="sm" color={isActive ? "black" : "white"}>
-                    {navIcons[link.id as keyof typeof navIcons]}
-                  </Icon>
+                  <span
+                    className={`transition-all duration-200 ${
+                      isOpen ? "opacity-100 scale-100" : "opacity-0 scale-0"
+                    }`}
+                  >
+                    <Icon size="lg" color={isActive ? "black" : "white"}>
+                      {navIcons[link.id as keyof typeof navIcons]}
+                    </Icon>
+                  </span>
+                  <span
+                    className={`pointer-events-none absolute right-[calc(100%+0.75rem)] top-1/2 -translate-y-1/2 rounded-element bg-gray-900/90 px-3 py-2 text-body-sm text-white whitespace-nowrap transition-opacity duration-200 ${
+                      isOpen ? "opacity-0 group-hover:opacity-100" : "opacity-0"
+                    }`}
+                  >
+                    {link.label}
+                  </span>
                 </button>
-                
-                {/* Tooltip */}
-                <div
-                  className="absolute bottom-full mb-2 left-1/2 transform -translate-x-1/2 px-2 py-1 bg-gray-900 text-white text-caption rounded-element whitespace-nowrap opacity-0 hover:opacity-100 transition-opacity duration-300 pointer-events-none"
-                  style={{
-                    transform: `translate(${position.x - 24}px, ${position.y - 56}px) translateX(-50%)`,
-                    opacity: isOpen ? 0 : 0, // Initially hidden, shows on hover
-                  }}
-                >
-                  {link.label}
-                </div>
               </div>
             );
           })}
@@ -173,14 +237,20 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
         {/* Main FAB Button */}
         <button
           onClick={toggleMenu}
-          className={`w-14 h-14 rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-highest flex items-center justify-center transition-all duration-300 hover:scale-hover-lg active:scale-95 ${
-            isOpen ? "rotate-180" : ""
-          }`}
+          className="relative z-0 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-highest transition-all duration-300 hover:scale-hover-lg active:scale-95"
           aria-label="Toggle navigation"
+          aria-expanded={isOpen}
+          aria-controls="floating-navigation-menu"
         >
-          <Icon size="md" color="black">
-            <FaCompass />
-          </Icon>
+          <span
+            aria-hidden="true"
+            className="pointer-events-none transition-transform duration-500 ease-[cubic-bezier(0.22,1.35,0.36,1)]"
+            style={{ transform: `rotate(${compassRotation}deg)` }}
+          >
+            <Icon size="xl" color="black">
+              <FaCompass />
+            </Icon>
+          </span>
         </button>
       </div>
     </>

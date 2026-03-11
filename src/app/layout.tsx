@@ -5,22 +5,28 @@ import "./globals.css";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Mc Ray Escoto - Full Stack Developer | Orb-Weaver",
+  metadataBase: new URL("https://makienaut.github.io"),
+  title: "Mc Ray Escoto | Full Stack Developer",
   description:
-    "Full-Stack Web Developer specializing in modern web applications. Building exceptional experiences, hunting bugs, and delivering quality solutions.",
+    "Portfolio of Mc Ray Escoto, a full stack developer building scalable web applications with React.js, Next.js, Laravel, and TypeScript.",
   keywords:
-    "web developer, full stack, React, Next.js, PHP, JavaScript, portfolio",
+    "Mc Ray Escoto, full stack developer, React.js, Next.js, Laravel, TypeScript, web developer portfolio, Pangasinan Philippines",
   authors: [{ name: "Mc Ray Escoto" }],
+  alternates: {
+    canonical: "/",
+  },
   icons: {
     icon: "/favicon.png",
     shortcut: "/favicon.png",
     apple: "/favicon.png",
   },
   openGraph: {
-    title: "Mc Ray Escoto - Full Stack Developer",
+    title: "Mc Ray Escoto | Full Stack Developer",
     description:
-      "Building exceptional web experiences with modern technologies",
+      "Full stack developer with experience in enterprise delivery, freelance projects, and modern web application development.",
     type: "website",
+    url: "https://makienaut.github.io",
+    siteName: "Mc Ray Escoto Portfolio",
   },
 };
 

@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import { Card, Typography, Badge, Icon } from "@/components/atoms";
@@ -13,6 +15,14 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   project,
   className = "",
 }) => {
+  const [isExpandedMobile, setIsExpandedMobile] = React.useState(false);
+  const collapsedDescriptionClasses =
+    "max-h-[5.25rem] opacity-90 md:max-h-[5.25rem] md:group-hover:max-h-44 md:group-hover:opacity-100";
+
+  const toggleDescription = () => {
+    setIsExpandedMobile((prev) => !prev);
+  };
+
   return (
     <Card className={`overflow-hidden group ${className}`}>
       <div className="h-40 sm:h-44 md:h-48 bg-gradient-to-br from-gray-800 to-gray-900 relative overflow-hidden">
@@ -35,14 +45,31 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
           {project.title}
         </Typography>
         
-        <Typography
-          variant="body"
-          color="gray"
-          font="poppins"
-          className="mb-gap-md line-clamp-3"
-        >
-          {project.description}
-        </Typography>
+        <div className="mb-gap-md">
+          <div
+            className={`overflow-hidden transition-all duration-500 ease-out ${
+              isExpandedMobile ? "max-h-44 opacity-100" : collapsedDescriptionClasses
+            }`}
+          >
+            <Typography
+              variant="body"
+              color="gray"
+              font="poppins"
+              className="pb-1 leading-relaxed"
+            >
+              {project.description}
+            </Typography>
+          </div>
+          <button
+            type="button"
+            onClick={toggleDescription}
+            className="mt-2 text-xs font-medium text-brand-primary transition-colors duration-300 hover:text-brand-primary-dark md:hidden"
+            aria-expanded={isExpandedMobile}
+            aria-label={`${isExpandedMobile ? "Collapse" : "Expand"} description for ${project.title}`}
+          >
+            {isExpandedMobile ? "Show less" : "Read more"}
+          </button>
+        </div>
 
         <div className="flex flex-wrap gap-gap-sm mb-gap-md">
           {project.tech.map((tech, index) => (

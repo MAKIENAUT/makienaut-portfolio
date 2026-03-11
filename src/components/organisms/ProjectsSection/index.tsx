@@ -23,6 +23,15 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Featured Projects
           </Typography>
+          <Typography
+            variant="body"
+            color="gray"
+            font="poppins"
+            className="mx-auto mt-4 max-w-2xl leading-relaxed"
+          >
+            A mix of client work, academic delivery, and business systems that reflect how I build:
+            practical scope, clean execution, and measurable outcomes.
+          </Typography>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gap-md">

@@ -11,8 +11,7 @@ export const Footer: React.FC<FooterProps> = ({ className = "" }) => {
       className={`py-gap-md text-center border-t border-gray-800 px-section-x ${className}`}
     >
       <Typography variant="caption" color="gray" font="poppins">
-        © {new Date().getFullYear()} Built with 💛 by{" "}
-        <span className="text-brand-primary">Mc Ray Escoto</span> | Orb-Weaver
+        © {new Date().getFullYear()} Mc Ray Escoto. Built with Next.js and focused on clean web delivery.
       </Typography>
     </footer>
   );

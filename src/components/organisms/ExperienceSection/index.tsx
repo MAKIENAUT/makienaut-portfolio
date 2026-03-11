@@ -10,6 +10,8 @@ interface ExperienceSectionProps {
 export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
   className = "",
 }) => {
+  const orderedExperiences = [...experiences].reverse();
+
   return (
     <section
       id="experience"
@@ -23,13 +25,22 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Experience
           </Typography>
+          <Typography
+            variant="body"
+            color="gray"
+            font="poppins"
+            className="mx-auto mt-4 max-w-2xl leading-relaxed"
+          >
+            My path combines enterprise work, internships, freelance delivery, and project leadership.
+            That mix made me comfortable owning both implementation details and delivery outcomes.
+          </Typography>
         </div>
 
         {/* Mobile/Tablet Timeline */}
         <div className="lg:hidden relative">
           <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-gradient-to-b from-brand-primary via-brand-primary to-brand-primary/20" />
           <div className="space-y-gap-md">
-            {experiences.map((exp) => (
+            {orderedExperiences.map((exp, index) => (
               <div key={exp.id} className="relative pl-8 sm:pl-10">
                 <div className="absolute left-0 top-2 w-4 h-4 bg-brand-primary rounded-full border-2 sm:border-4 border-black z-10" />
                 <ExperienceCard experience={exp} />
@@ -42,7 +53,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
         <div className="hidden lg:block relative">
           <div className="absolute left-1/2 transform -translate-x-1/2 w-0.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500" />
 
-          {experiences.map((exp, index) => (
+          {orderedExperiences.map((exp, index) => (
             <div
               key={exp.id}
               className={`relative flex items-center mb-12 ${
@@ -50,8 +61,8 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
               }`}
             >
               <div
-                className={`w-5/12 ${
-                  index % 2 === 0 ? "text-right pr-8" : "text-left pl-8"
+                className={`w-[46%] xl:w-[47%] ${
+                  index % 2 === 0 ? "text-right pr-5 xl:pr-6" : "text-left pl-5 xl:pl-6"
                 }`}
               >
                 <ExperienceCard experience={exp} />

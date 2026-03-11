@@ -1,9 +1,8 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import Image from "next/image";
-import { Typography, Button, Icon } from "@/components/atoms";
-import { FaBriefcase, FaEnvelope } from "react-icons/fa";
+import React from "react";
+import { Typography, Button, Badge } from "@/components/atoms";
+import { FaBriefcase, FaEnvelope, FaArrowRight } from "react-icons/fa";
 
 interface HeroSectionProps {
   fullName?: string;
@@ -16,21 +15,16 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onScrollToSection,
   className = "",
 }) => {
-  const [typedText, setTypedText] = useState("");
-
-  useEffect(() => {
-    let index = 0;
-    const timer = setInterval(() => {
-      if (index <= fullName.length) {
-        setTypedText(fullName.slice(0, index));
-        index++;
-      } else {
-        clearInterval(timer);
-      }
-    }, 100);
-
-    return () => clearInterval(timer);
-  }, [fullName]);
+  const quickFacts = [
+    "Mid-Level Full Stack Developer",
+    "React.js, Next.js, Laravel",
+    "Pangasinan, Philippines",
+  ];
+  const highlights = [
+    { label: "Experience", value: "4+ roles shipped" },
+    { label: "Core focus", value: "Web apps and UI delivery" },
+    { label: "English", value: "C1 EF SET" },
+  ];
 
   const scrollToSection = (sectionId: string) => {
     if (onScrollToSection) {
@@ -46,51 +40,60 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   return (
     <section
       id="home"
-      className={`min-h-screen flex items-center justify-center px-section-x relative overflow-hidden ${className}`}
+      className={`relative flex min-h-screen items-center justify-center overflow-hidden px-section-x ${className}`}
     >
-      <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-black/70 z-0" />
+      <div className="absolute inset-0 z-0 bg-[radial-gradient(circle_at_top_left,rgba(255,215,0,0.16),transparent_32%),radial-gradient(circle_at_80%_20%,rgba(255,255,255,0.06),transparent_24%),linear-gradient(180deg,rgba(0,0,0,0.35),rgba(0,0,0,0.88))]" />
+      <div className="absolute inset-x-0 top-0 z-0 h-px bg-gradient-to-r from-transparent via-brand-primary/40 to-transparent" />
 
-      <div className="max-w-7xl w-full grid grid-cols-1 lg:grid-cols-2 gap-gap-lg lg:gap-section-x items-center relative z-medium">
-        <div className="text-white space-y-gap-md animate-fadeIn text-center lg:text-left">
-          <Typography
-            variant="overline"
-            color="yellow"
-            font="poppins"
-            className="font-semibold"
-          >
-            Welcome to my portfolio
-          </Typography>
-          
-          <Typography variant="h1" color="white" font="spaceGrotesk">
-            Hi, I&apos;m{" "}
-            <span className="bg-gradient-to-r from-brand-primary to-brand-primary-dark bg-clip-text text-transparent block sm:inline mt-2 sm:mt-0">
-              {typedText}
+      <div className="relative z-medium grid w-full max-w-7xl grid-cols-1 items-center gap-gap-lg lg:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)] lg:gap-section-x">
+        <div className="space-y-gap-md text-center text-white animate-fadeIn lg:text-left">
+          <div className="flex flex-wrap justify-center gap-3 lg:justify-start">
+            {quickFacts.map((fact) => (
+              <Badge key={fact} variant="tech" className="bg-white/5 text-gray-100 border-white/10">
+                {fact}
+              </Badge>
+            ))}
+          </div>
+
+          <div className="max-w-4xl">
+            <Typography
+              variant="h1"
+              color="white"
+              font="spaceGrotesk"
+              className="text-balance text-heading-lg leading-tight sm:text-display-sm lg:text-display-md"
+            >
+              Building production-ready web experiences for teams that need clean delivery.
+            </Typography>
+            <Typography
+              variant="h1"
+              color="gradient"
+              font="spaceGrotesk"
+              className="mt-4 block text-display-lg font-bold tracking-tight leading-none sm:text-display-xl sm:leading-none lg:text-[5.5rem] lg:leading-[1.02]"
+            >
+              {fullName}
               <span className="animate-pulse">|</span>
-            </span>
-          </Typography>
-          
+            </Typography>
+          </div>
+
           <Typography
             variant="body"
             color="gray"
             font="poppins"
-            className="leading-relaxed max-w-2xl mx-auto lg:mx-0"
+            className="max-w-2xl leading-relaxed text-gray-200 mx-auto lg:mx-0"
           >
-            Full-Stack Web Developer with an acute fascination for spiders 🕸️
-            <br className="hidden sm:block" />
-            <span className="block mt-2 sm:inline sm:mt-0">
-              Building exceptional web experiences, hunting bugs, and delivering
-              quality solutions.
-            </span>
+            I&apos;m a full-stack developer with professional experience across enterprise work,
+            freelance delivery, and AI-assisted product development. My stack is strongest in
+            React.js, Next.js, Laravel, TypeScript, and practical end-to-end execution.
           </Typography>
-          
-          <div className="flex flex-col sm:flex-row gap-gap-sm justify-center lg:justify-start pt-gap-sm">
+
+          <div className="flex flex-col justify-center gap-gap-sm pt-gap-sm sm:flex-row lg:justify-start">
             <Button
               variant="primary"
               onClick={() => scrollToSection("projects")}
               icon={<FaBriefcase />}
               className="w-full sm:w-auto"
             >
-              View Projects
+              View Selected Work
             </Button>
             <Button
               variant="outline"
@@ -98,25 +101,83 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
               icon={<FaEnvelope />}
               className="w-full sm:w-auto"
             >
-              Get In Touch
+              Contact Me
             </Button>
+          </div>
+
+          <div className="grid gap-4 pt-gap-sm sm:grid-cols-3">
+            {highlights.map((item) => (
+              <div
+                key={item.label}
+                className="rounded-card border border-white/10 bg-white/5 px-4 py-4 text-left backdrop-blur-sm"
+              >
+                <Typography variant="caption" color="yellow" className="mb-2 block">
+                  {item.label}
+                </Typography>
+                <Typography variant="body" color="white" font="spaceGrotesk" className="text-body-md">
+                  {item.value}
+                </Typography>
+              </div>
+            ))}
           </div>
         </div>
 
-        <div className="relative mt-8 lg:mt-0 max-w-sm sm:max-w-md mx-auto lg:max-w-none">
-          <div className="w-full max-w-[280px] sm:max-w-[350px] md:max-w-[400px] lg:max-w-md mx-auto relative">
-            <div className="absolute inset-0 bg-gradient-to-r from-brand-primary to-brand-primary-dark rounded-card-lg blur-xl sm:blur-2xl opacity-20 animate-pulse" />
-            <div className="relative bg-gray-800 rounded-card-lg p-card-padding border-2 border-brand-primary/20 shadow-elevation-medium">
-              <div className="aspect-square bg-gradient-to-br from-gray-700 to-gray-900 rounded-card flex items-center justify-center p-card-padding">
-                <div className="relative w-full h-full">
-                  <Image
-                    src="/Orb-Weaver logo.png"
-                    alt="Orb-Weaver Logo"
-                    fill
-                    className="object-contain"
-                    sizes="(max-width: 640px) 200px, (max-width: 768px) 250px, (max-width: 1024px) 300px, 400px"
-                    priority
-                  />
+        <div className="mx-auto mt-8 w-full max-w-md lg:mt-0 lg:max-w-none">
+          <div className="relative overflow-hidden rounded-card-lg border border-brand-primary/20 bg-gradient-to-br from-white/10 via-white/5 to-transparent p-6 shadow-elevation-high">
+            <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(255,215,0,0.12),transparent_55%)]" />
+            <div className="relative space-y-6">
+              <div className="flex items-center justify-between border-b border-white/10 pb-4">
+                <div>
+                  <Typography variant="caption" color="yellow" className="mb-1 block">
+                    Current Role
+                  </Typography>
+                  <Typography variant="h4" color="white" font="spaceGrotesk">
+                    NTT Limited Philippines
+                  </Typography>
+                </div>
+                <div className="inline-flex whitespace-nowrap rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1 text-xs text-brand-primary sm:text-sm">
+                  June 2024 - Present
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Typography variant="h3" color="white" font="spaceGrotesk">
+                  What I bring
+                </Typography>
+                <div className="space-y-3 text-left">
+                  {[
+                    "Enterprise-facing full-stack work with React.js, Next.js, and Laravel.",
+                    "Cross-functional delivery across development, QA, design, and client communication.",
+                    "Hands-on experience shipping websites, internal tools, and custom business platforms.",
+                  ].map((point) => (
+                    <div key={point} className="flex items-start gap-3">
+                      <span className="mt-1 text-brand-primary">
+                        <FaArrowRight />
+                      </span>
+                      <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed text-gray-200">
+                        {point}
+                      </Typography>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-card border border-white/10 bg-black/20 p-4">
+                  <Typography variant="caption" color="yellow" className="mb-2 block">
+                    Availability
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed">
+                    Open for part-time roles, contract work, and freelance web development.
+                  </Typography>
+                </div>
+                <div className="rounded-card border border-white/10 bg-black/20 p-4">
+                  <Typography variant="caption" color="yellow" className="mb-2 block">
+                    Priority
+                  </Typography>
+                  <Typography variant="caption" color="gray" font="poppins" className="leading-relaxed">
+                    Collaborative teams focused on reliable delivery and clean, maintainable implementation.
+                  </Typography>
                 </div>
               </div>
             </div>

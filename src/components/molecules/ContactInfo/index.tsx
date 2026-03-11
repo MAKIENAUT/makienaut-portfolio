@@ -21,14 +21,14 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
       <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-brand-primary to-brand-primary-dark rounded-full flex items-center justify-center flex-shrink-0">
         <Icon color="black">{icon}</Icon>
       </div>
-      <div className="text-left">
+      <div className="min-w-0 text-center">
         <Typography variant="caption" color="gray">
           {label}
         </Typography>
         <Typography
           variant="body"
           color={href ? "yellow" : "white"}
-          className={href ? "hover:underline break-all" : ""}
+          className={href ? "break-words hover:underline sm:whitespace-nowrap" : "break-words sm:whitespace-nowrap"}
         >
           {value}
         </Typography>
@@ -36,7 +36,7 @@ export const ContactInfo: React.FC<ContactInfoProps> = ({
     </>
   );
 
-  const baseClasses = `flex items-center gap-gap-md ${className}`;
+  const baseClasses = `flex w-auto items-center justify-center gap-gap-md ${className}`;
 
   return href ? (
     <a href={href} className={baseClasses}>
