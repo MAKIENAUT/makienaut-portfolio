@@ -7,10 +7,22 @@ interface ExperienceSectionProps {
   className?: string;
 }
 
+const getExperienceEndDate = (dateRange: string) => {
+  const endDate = dateRange.split(" - ")[1];
+
+  if (endDate === "Present") {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return endDate ? Date.parse(`1 ${endDate}`) : 0;
+};
+
 export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
   className = "",
 }) => {
-  const orderedExperiences = [...experiences].reverse();
+  const orderedExperiences = [...experiences].sort(
+    (a, b) => getExperienceEndDate(b.date) - getExperienceEndDate(a.date)
+  );
 
   return (
     <section
@@ -20,7 +32,7 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
-            04. Journey
+            02. Experience
           </Typography>
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Experience
@@ -36,42 +48,17 @@ export const ExperienceSection: React.FC<ExperienceSectionProps> = ({
           </Typography>
         </div>
 
-        {/* Mobile/Tablet Timeline */}
-        <div className="lg:hidden relative">
-          <div className="absolute left-2 top-2 bottom-2 w-0.5 bg-gradient-to-b from-brand-primary via-brand-primary to-brand-primary/20" />
-          <div className="space-y-gap-md">
-            {orderedExperiences.map((exp, index) => (
-              <div key={exp.id} className="relative pl-8 sm:pl-10">
-                <div className="absolute left-0 top-2 w-4 h-4 bg-brand-primary rounded-full border-2 sm:border-4 border-black z-10" />
-                <ExperienceCard experience={exp} />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Desktop Timeline */}
-        <div className="hidden lg:block relative">
-          <div className="absolute left-1/2 transform -translate-x-1/2 w-0.5 h-full bg-gradient-to-b from-yellow-400 to-orange-500" />
-
-          {orderedExperiences.map((exp, index) => (
-            <div
-              key={exp.id}
-              className={`relative flex items-center mb-12 ${
-                index % 2 === 0 ? "justify-start" : "justify-end"
-              }`}
-            >
-              <div
-                className={`w-[46%] xl:w-[47%] ${
-                  index % 2 === 0 ? "text-right pr-5 xl:pr-6" : "text-left pl-5 xl:pl-6"
-                }`}
-              >
-                <ExperienceCard experience={exp} />
-              </div>
-
-              <div className="absolute left-1/2 transform -translate-x-1/2 w-4 h-4 bg-yellow-400 rounded-full border-4 border-black" />
-            </div>
+        <ol className="relative mx-auto max-w-4xl space-y-5 before:absolute before:bottom-4 before:left-[0.4375rem] before:top-4 before:w-px before:bg-gradient-to-b before:from-brand-primary before:via-brand-primary/60 before:to-brand-primary/10 sm:before:left-[0.6875rem]">
+          {orderedExperiences.map((exp) => (
+            <li key={exp.id} className="relative pl-8 sm:pl-12">
+              <span
+                aria-hidden="true"
+                className="absolute left-0 top-7 z-low h-3.5 w-3.5 rounded-full border-[3px] border-black bg-brand-primary shadow-[0_0_0_4px_rgba(255,215,0,0.12)] sm:left-1"
+              />
+              <ExperienceCard experience={exp} />
+            </li>
           ))}
-        </div>
+        </ol>
       </div>
     </section>
   );

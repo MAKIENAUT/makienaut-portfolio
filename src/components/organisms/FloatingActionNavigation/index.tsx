@@ -24,14 +24,16 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const pendingSectionRef = useRef<string | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const navItemRefs = useRef<Array<HTMLAnchorElement | null>>([]);
 
   const navLinks: NavLink[] = useMemo(
     () => [
       { id: "home", label: "Home", href: "#home" },
-      { id: "about", label: "About", href: "#about" },
-      { id: "skills", label: "Skills", href: "#skills" },
       { id: "projects", label: "Projects", href: "#projects" },
       { id: "experience", label: "Experience", href: "#experience" },
+      { id: "skills", label: "Skills", href: "#skills" },
+      { id: "about", label: "About", href: "#about" },
       { id: "contact", label: "Contact", href: "#contact" },
     ],
     []
@@ -47,71 +49,183 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
   };
 
   useEffect(() => {
-    const handleScroll = () => {
-      const viewportMarker = window.scrollY + window.innerHeight * 0.35;
-      let currentSection = navLinks[0]?.id ?? "home";
+    const visibleSections = new Set<string>();
+    const sectionElements = navLinks
+      .map((link) => document.getElementById(link.id))
+      .filter((element): element is HTMLElement => element !== null);
 
-      for (const link of navLinks) {
-        const element = document.getElementById(link.id);
+    const syncSectionFromHash = () => {
+      const hashSection = window.location.hash.slice(1);
 
-        if (!element) {
-          continue;
-        }
-
-        const { offsetTop, offsetHeight } = element;
-
-        if (viewportMarker >= offsetTop) {
-          currentSection = link.id;
-        }
-
-        if (viewportMarker >= offsetTop && viewportMarker < offsetTop + offsetHeight) {
-          currentSection = link.id;
-          break;
-        }
+      if (navLinks.some((link) => link.id === hashSection)) {
+        pendingSectionRef.current = hashSection;
+        setActiveSection(hashSection);
+      } else {
+        pendingSectionRef.current = null;
       }
+    };
 
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 8) {
-        currentSection = navLinks[navLinks.length - 1]?.id ?? currentSection;
-      }
+    syncSectionFromHash();
+    window.addEventListener("hashchange", syncSectionFromHash);
+    window.addEventListener("popstate", syncSectionFromHash);
 
-      if (pendingSectionRef.current) {
-        if (currentSection !== pendingSectionRef.current) {
+    if (!("IntersectionObserver" in window)) {
+      return () => {
+        window.removeEventListener("hashchange", syncSectionFromHash);
+        window.removeEventListener("popstate", syncSectionFromHash);
+      };
+    }
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            visibleSections.add(entry.target.id);
+          } else {
+            visibleSections.delete(entry.target.id);
+          }
+        });
+
+        const pendingSection = pendingSectionRef.current;
+
+        if (pendingSection) {
+          if (visibleSections.has(pendingSection)) {
+            pendingSectionRef.current = null;
+            setActiveSection(pendingSection);
+          }
+
           return;
         }
 
-        pendingSectionRef.current = null;
-      }
+        // The final matching section is the one furthest down the page. Using
+        // the top half of the viewport makes this act like a stable scroll spy
+        // without reading layout values on every scroll event.
+        const currentSection = [...navLinks]
+          .reverse()
+          .find((link) => visibleSections.has(link.id));
 
-      setActiveSection(currentSection);
-    };
+        if (currentSection) {
+          setActiveSection(currentSection.id);
+        }
+      },
+      { rootMargin: "0px 0px -50% 0px", threshold: 0 }
+    );
 
-    handleScroll();
-    window.addEventListener("scroll", handleScroll);
-    window.addEventListener("resize", handleScroll);
+    sectionElements.forEach((element) => observer.observe(element));
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
-      window.removeEventListener("resize", handleScroll);
+      observer.disconnect();
+      window.removeEventListener("hashchange", syncSectionFromHash);
+      window.removeEventListener("popstate", syncSectionFromHash);
     };
   }, [navLinks]);
 
-  const handleNavClick = (
-    e: React.MouseEvent<HTMLButtonElement>,
-    href: string
-  ) => {
-    e.preventDefault();
-    const targetId = href.replace("#", "");
-    const element = document.getElementById(targetId);
-    if (element) {
-      pendingSectionRef.current = targetId;
-      setActiveSection(targetId);
-      element.scrollIntoView({ behavior: "smooth" });
+  useEffect(() => {
+    if (!isOpen) {
+      return;
     }
+
+    const focusFrame = window.requestAnimationFrame(() => {
+      const currentItem = navItemRefs.current.find(
+        (item) => item?.getAttribute("aria-current") === "location"
+      );
+      (currentItem ?? navItemRefs.current[0])?.focus();
+    });
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+
+      event.preventDefault();
+      triggerRef.current?.focus({ preventScroll: true });
+      setIsOpen(false);
+    };
+
+    document.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      window.cancelAnimationFrame(focusFrame);
+      document.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isOpen]);
+
+  const closeMenu = (returnFocus = true) => {
+    if (returnFocus) {
+      triggerRef.current?.focus({ preventScroll: true });
+    }
+
     setIsOpen(false);
   };
 
+  const handleNavClick = (
+    event: React.MouseEvent<HTMLAnchorElement>,
+    href: string
+  ) => {
+    if (
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const targetId = href.slice(1);
+    const element = document.getElementById(targetId);
+
+    if (!element) {
+      return;
+    }
+
+    event.preventDefault();
+    pendingSectionRef.current = targetId;
+    setActiveSection(targetId);
+
+    if (window.location.hash !== href) {
+      window.history.pushState(null, "", href);
+    }
+
+    const prefersReducedMotion = window.matchMedia(
+      "(prefers-reduced-motion: reduce)"
+    ).matches;
+
+    element.scrollIntoView({
+      behavior: prefersReducedMotion ? "auto" : "smooth",
+      block: "start",
+    });
+    closeMenu();
+  };
+
+  const handleMenuKeyDown = (
+    event: React.KeyboardEvent<HTMLAnchorElement>,
+    index: number
+  ) => {
+    let nextIndex: number | null = null;
+
+    if (event.key === "ArrowDown" || event.key === "ArrowRight") {
+      nextIndex = (index + 1) % navLinks.length;
+    } else if (event.key === "ArrowUp" || event.key === "ArrowLeft") {
+      nextIndex = (index - 1 + navLinks.length) % navLinks.length;
+    } else if (event.key === "Home") {
+      nextIndex = 0;
+    } else if (event.key === "End") {
+      nextIndex = navLinks.length - 1;
+    }
+
+    if (nextIndex !== null) {
+      event.preventDefault();
+      navItemRefs.current[nextIndex]?.focus();
+    }
+  };
+
   const toggleMenu = () => {
-    setIsOpen((currentState) => !currentState);
+    if (isOpen) {
+      closeMenu(false);
+    } else {
+      setIsOpen(true);
+    }
   };
 
   const getNavAngle = (index: number, total: number) => {
@@ -127,18 +241,8 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
     total: number,
     isFanOpen: boolean = true
   ) => {
-    let angle = getNavAngle(index, total);
-    let radius;
-
-    if (isFanOpen) {
-      // Final fan position
-      // Push buttons farther from the hub so they separate more along the arc
-      radius = 118;
-    } else {
-      // Rest indicator dots on the edge of the main FAB
-      radius = 42;
-    }
-
+    const angle = getNavAngle(index, total);
+    const radius = isFanOpen ? 118 : 42;
     const radian = (angle * Math.PI) / 180;
 
     return {
@@ -148,43 +252,44 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
   };
 
   const activeIndex = navLinks.findIndex((link) => link.id === activeSection);
+  const activeLabel =
+    navLinks[activeIndex >= 0 ? activeIndex : 0]?.label ?? "Home";
   const compassRotation =
     compassRotations[activeIndex >= 0 ? activeIndex : 0] ?? compassRotations[0];
 
-  useEffect(() => {
-    console.log("Compass icon rotation:", compassRotation);
-  }, [compassRotation]);
-
   return (
     <>
-      {/* Background overlay when open */}
       {isOpen && (
-        <div
-          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
-          onClick={() => setIsOpen(false)}
+        <button
+          type="button"
+          tabIndex={-1}
+          className="fixed inset-0 z-40 cursor-default border-0 bg-black/30 p-0 backdrop-blur-sm print:hidden"
+          onClick={() => closeMenu()}
+          aria-label="Close section navigation"
         />
       )}
-      
-      <div
-        className={`fixed bottom-8 right-8 z-50 h-16 w-16 overflow-visible transition-transform duration-300 ease-out md:bottom-20 md:right-20 ${
+
+      <nav
+        aria-label="Page sections"
+        className={`fixed bottom-[calc(1rem+env(safe-area-inset-bottom))] right-[calc(1rem+env(safe-area-inset-right))] z-50 h-16 w-16 overflow-visible transition-transform duration-300 ease-out motion-reduce:transition-none print:hidden md:bottom-[calc(5rem+env(safe-area-inset-bottom))] md:right-[calc(5rem+env(safe-area-inset-right))] ${
           isOpen
             ? "-translate-x-12 -translate-y-12 md:translate-x-0 md:translate-y-0"
             : "translate-x-0 translate-y-0"
         } ${className}`}
       >
-        {/* Navigation Items */}
-        <div
+        <ul
           id="floating-navigation-menu"
-          className="pointer-events-none absolute inset-0 z-10 overflow-visible"
+          aria-hidden={!isOpen}
+          className="pointer-events-none absolute inset-0 z-10 m-0 list-none overflow-visible p-0"
         >
           {navLinks.map((link, index) => {
             const isActive = activeSection === link.id;
             const position = getRadialPosition(index, navLinks.length, isOpen);
-            
+
             return (
-              <div
+              <li
                 key={link.id}
-                className={`absolute right-1/2 bottom-1/2 transition-all duration-300 ease-out ${
+                className={`absolute bottom-1/2 right-1/2 transition-all duration-300 ease-out motion-reduce:transition-none ${
                   isOpen ? "pointer-events-auto" : "pointer-events-none"
                 }`}
                 style={{
@@ -196,25 +301,30 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
                   transitionDelay: isOpen ? `${index * 50}ms` : "0ms",
                 }}
               >
-                <button
-                  onClick={(e) => handleNavClick(e, link.href)}
-                  className={`group relative flex h-14 w-14 items-center justify-center rounded-full border-2 transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out ${
+                <a
+                  ref={(element) => {
+                    navItemRefs.current[index] = element;
+                  }}
+                  href={link.href}
+                  onClick={(event) => handleNavClick(event, link.href)}
+                  onKeyDown={(event) => handleMenuKeyDown(event, index)}
+                  className={`group relative flex h-14 w-14 items-center justify-center rounded-full border-2 transition-[background-color,border-color,box-shadow,transform] duration-300 ease-out motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-4 focus-visible:ring-offset-black ${
                     isOpen
                       ? isActive
-                        ? "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black border-brand-primary shadow-elevation-high hover:scale-hover-lg"
-                        : "bg-gray-900/90 backdrop-blur-sm text-white border-gray-700 shadow-elevation-high hover:border-brand-primary hover:bg-gray-800 hover:scale-hover-lg"
+                        ? "border-brand-primary bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-high hover:scale-hover-lg"
+                        : "border-gray-700 bg-gray-900/95 text-white shadow-elevation-high backdrop-blur-sm hover:scale-hover-lg hover:border-brand-primary hover:bg-gray-800"
                       : isActive
                         ? "border-white/80 bg-white text-transparent shadow-none"
                         : "border-white/20 bg-brand-primary/90 text-transparent shadow-none"
                   }`}
-                  title={link.label}
-                  aria-label={`Go to ${link.label}`}
-                  aria-current={isActive ? "page" : undefined}
+                  aria-current={isActive ? "location" : undefined}
                   tabIndex={isOpen ? 0 : -1}
+                  title={link.label}
                 >
                   <span
-                    className={`transition-all duration-200 ${
-                      isOpen ? "opacity-100 scale-100" : "opacity-0 scale-0"
+                    aria-hidden="true"
+                    className={`transition-all duration-200 motion-reduce:transition-none ${
+                      isOpen ? "scale-100 opacity-100" : "scale-0 opacity-0"
                     }`}
                   >
                     <Icon size="lg" color={isActive ? "black" : "white"}>
@@ -222,37 +332,47 @@ export const FloatingActionNavigation: React.FC<FloatingActionNavigationProps> =
                     </Icon>
                   </span>
                   <span
-                    className={`pointer-events-none absolute right-[calc(100%+0.75rem)] top-1/2 -translate-y-1/2 rounded-element bg-gray-900/90 px-3 py-2 text-body-sm text-white whitespace-nowrap transition-opacity duration-200 ${
-                      isOpen ? "opacity-0 group-hover:opacity-100" : "opacity-0"
+                    className={`pointer-events-none absolute right-[calc(100%+0.625rem)] top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-element border px-3 py-2 text-body-sm font-medium opacity-0 shadow-elevation-high transition-opacity duration-200 motion-reduce:transition-none md:block md:group-hover:opacity-100 md:group-focus-visible:opacity-100 ${
+                      isActive
+                        ? "border-brand-primary bg-brand-primary text-black"
+                        : "border-gray-700 bg-gray-950/95 text-white"
                     }`}
                   >
                     {link.label}
                   </span>
-                </button>
-              </div>
+                </a>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
-        {/* Main FAB Button */}
         <button
+          ref={triggerRef}
+          type="button"
           onClick={toggleMenu}
-          className="relative z-0 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-highest transition-all duration-300 hover:scale-hover-lg active:scale-95"
-          aria-label="Toggle navigation"
+          className="group relative z-20 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black shadow-elevation-highest transition-all duration-300 hover:scale-hover-lg active:scale-95 motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-4 focus-visible:ring-offset-black"
+          aria-label={`${isOpen ? "Close" : "Open"} section navigation. Current section: ${activeLabel}`}
           aria-expanded={isOpen}
           aria-controls="floating-navigation-menu"
         >
           <span
             aria-hidden="true"
-            className="pointer-events-none transition-transform duration-500 ease-[cubic-bezier(0.22,1.35,0.36,1)]"
+            className="pointer-events-none transition-transform duration-500 ease-[cubic-bezier(0.22,1.35,0.36,1)] motion-reduce:transition-none"
             style={{ transform: `rotate(${compassRotation}deg)` }}
           >
             <Icon size="xl" color="black">
               <FaCompass />
             </Icon>
           </span>
+
+          <span
+            aria-hidden="true"
+            className="pointer-events-none absolute right-[calc(100%+0.75rem)] top-1/2 hidden -translate-y-1/2 whitespace-nowrap rounded-full border border-brand-primary/40 bg-gray-950/95 px-3 py-1.5 text-xs font-semibold tracking-wide text-white opacity-0 shadow-elevation-high transition-opacity duration-200 motion-reduce:transition-none md:block md:group-hover:opacity-100 md:group-focus-visible:opacity-100"
+          >
+            {isOpen ? "Close navigation" : "Navigate"}
+          </span>
         </button>
-      </div>
+      </nav>
     </>
   );
 };

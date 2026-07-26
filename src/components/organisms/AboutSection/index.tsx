@@ -23,7 +23,7 @@ export const AboutSection: React.FC<AboutSectionProps> = ({
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
-            01. Introduction
+            04. Background
           </Typography>
           <Typography variant="h2" color="white" font="spaceGrotesk">
             About Me

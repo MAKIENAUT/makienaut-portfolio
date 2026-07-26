@@ -3,6 +3,10 @@ import React from "react";
 interface ButtonProps {
   children: React.ReactNode;
   onClick?: () => void;
+  href?: string;
+  target?: React.HTMLAttributeAnchorTarget;
+  rel?: string;
+  type?: "button" | "submit" | "reset";
   variant?: "primary" | "secondary" | "outline";
   size?: "sm" | "md" | "lg";
   className?: string;
@@ -12,12 +16,16 @@ interface ButtonProps {
 export const Button: React.FC<ButtonProps> = ({
   children,
   onClick,
+  href,
+  target,
+  rel,
+  type = "button",
   variant = "primary",
   size = "md",
   className = "",
   icon,
 }) => {
-  const baseClasses = "font-semibold rounded-button transition-all duration-300 flex items-center justify-center gap-gap-sm";
+  const baseClasses = "inline-flex min-h-11 items-center justify-center gap-gap-sm rounded-button font-semibold transition-[background-color,border-color,color,box-shadow,transform] duration-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-4 focus-visible:ring-offset-black";
   
   const variantClasses = {
     primary: "bg-gradient-to-r from-brand-primary to-brand-primary-dark text-black hover:scale-hover-md",
@@ -31,13 +39,26 @@ export const Button: React.FC<ButtonProps> = ({
     lg: "px-6 py-3 text-body-lg",
   };
 
-  return (
-    <button
-      onClick={onClick}
-      className={`${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
-    >
-      {icon && <span className="text-sm sm:text-base">{icon}</span>}
+  const content = (
+    <>
+      {icon && <span aria-hidden="true" className="text-sm sm:text-base">{icon}</span>}
       {children}
+    </>
+  );
+
+  const classes = `${baseClasses} ${variantClasses[variant]} ${sizeClasses[size]} ${className}`;
+
+  if (href) {
+    return (
+      <a href={href} target={target} rel={rel} className={classes}>
+        {content}
+      </a>
+    );
+  }
+
+  return (
+    <button type={type} onClick={onClick} className={classes}>
+      {content}
     </button>
   );
 };

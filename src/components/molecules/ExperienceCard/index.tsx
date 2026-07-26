@@ -12,14 +12,17 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
   className = "",
 }) => {
   return (
-    <Card className={`p-card-padding ${className}`}>
-      <Typography
-        variant="caption"
-        color="yellow"
-        className="mb-gap-sm"
-      >
-        {experience.date}
-      </Typography>
+    <Card hover={false} className={`p-card-padding text-left ${className}`}>
+      <div className="mb-gap-sm flex flex-wrap items-center justify-between gap-2">
+        <Typography variant="caption" color="yellow">
+          {experience.date}
+        </Typography>
+        {experience.date.includes("Present") && (
+          <span className="rounded-full border border-brand-primary/30 bg-brand-primary/10 px-3 py-1 text-xs font-medium text-brand-primary">
+            Current
+          </span>
+        )}
+      </div>
       
       <Typography
         variant="h3"
@@ -39,10 +42,10 @@ export const ExperienceCard: React.FC<ExperienceCardProps> = ({
       </Typography>
       
       <Typography
-        variant="caption"
+        variant="body"
         color="gray"
         font="poppins"
-        className="leading-relaxed"
+        className="text-body-md leading-relaxed"
       >
         {experience.description}
       </Typography>

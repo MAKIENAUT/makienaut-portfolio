@@ -90,7 +90,7 @@ export const SkillsSection: React.FC<SkillsSectionProps> = ({
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-gap-sm">
-            02. Technologies
+            03. Capabilities
           </Typography>
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Skills & Tools

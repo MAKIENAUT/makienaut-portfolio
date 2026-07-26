@@ -1,8 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { poppins } from "@/styles/fonts";
 import "./globals.css";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://makienaut.github.io"),
@@ -36,8 +34,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="scroll-smooth">
-      <body className={`${inter.className} bg-black text-white antialiased`}>
+    <html lang="en">
+      <body className={`${poppins.className} bg-black text-white antialiased`}>
         {children}
       </body>
     </html>

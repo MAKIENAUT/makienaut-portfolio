@@ -60,6 +60,7 @@ const config: Config = {
         'heading-md': 'clamp(1.125rem, 2.5vw, 1.5rem)',
         'body-lg': 'clamp(1rem, 2vw, 1.125rem)',
         'body-md': 'clamp(0.875rem, 1.5vw, 1rem)',
+        'body-sm': 'clamp(0.8125rem, 1.25vw, 0.875rem)',
         'caption': 'clamp(0.75rem, 1.25vw, 0.875rem)',
       },
       borderRadius: {

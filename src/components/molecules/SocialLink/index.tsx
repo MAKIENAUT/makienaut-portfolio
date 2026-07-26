@@ -14,17 +14,22 @@ export const SocialLink: React.FC<SocialLinkProps> = ({
   label,
   className = "",
 }) => {
+  const isExternalLink = /^https?:\/\//.test(href);
+
   return (
     <a
       href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      aria-label={label}
-      className={`group flex h-10 w-10 items-center justify-center rounded-full border border-gray-800 bg-gray-900/50 text-white backdrop-blur-sm transition-all duration-500 ease-out hover:scale-hover-lg hover:bg-gradient-to-r hover:from-brand-primary hover:to-brand-primary-dark sm:h-12 sm:w-12 text-caption ${className}`}
+      target={isExternalLink ? "_blank" : undefined}
+      rel={isExternalLink ? "noopener noreferrer" : undefined}
+      aria-label={isExternalLink ? `${label} (opens in a new tab)` : label}
+      className={`group inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-gray-700 bg-gray-900/50 px-4 py-2 text-caption font-medium text-white backdrop-blur-sm transition-all duration-300 ease-out hover:border-brand-primary hover:bg-brand-primary hover:text-black focus-visible:border-brand-primary focus-visible:bg-brand-primary focus-visible:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary focus-visible:ring-offset-4 focus-visible:ring-offset-black ${className}`}
     >
-      <Icon className="transition-colors duration-500 ease-out group-hover:text-black">
-        {icon}
-      </Icon>
+      <span aria-hidden="true">
+        <Icon className="transition-colors duration-300 ease-out group-hover:text-black group-focus-visible:text-black">
+          {icon}
+        </Icon>
+      </span>
+      <span>{label}</span>
     </a>
   );
 };

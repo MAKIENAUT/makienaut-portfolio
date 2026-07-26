@@ -1,7 +1,4 @@
-"use client";
-
-import React, { useRef } from "react";
-import { inter } from "@/styles/fonts";
+import React from "react";
 import {
   HeroSection,
   AboutSection,
@@ -20,69 +17,26 @@ interface PortfolioTemplateProps {
 export const PortfolioTemplate: React.FC<PortfolioTemplateProps> = ({
   className = "",
 }) => {
-  const sectionsRef = useRef<{ [key: string]: HTMLElement | null }>({});
-
-  const scrollToSection = (sectionId: string) => {
-    const section = sectionsRef.current[sectionId] || document.getElementById(sectionId);
-    if (section) {
-      section.scrollIntoView({ behavior: "smooth" });
-    }
-  };
-
   return (
-    <main className={`${inter.className} w-full overflow-x-hidden ${className}`}>
-      <div
-        ref={(el) => {
-          sectionsRef.current["home"] = el;
-        }}
+    <div className={`w-full overflow-x-hidden ${className}`}>
+      <a
+        href="#main-content"
+        className="fixed left-4 top-4 z-[100] -translate-y-24 rounded-button bg-brand-primary px-4 py-3 font-semibold text-black shadow-elevation-high transition-transform focus:translate-y-0 print:hidden"
       >
-        <HeroSection onScrollToSection={scrollToSection} />
-      </div>
-      
-      <div
-        ref={(el) => {
-          sectionsRef.current["about"] = el;
-        }}
-      >
-        <AboutSection />
-      </div>
-      
-      <div
-        ref={(el) => {
-          sectionsRef.current["skills"] = el;
-        }}
-      >
-        <SkillsSection />
-      </div>
-      
-      <div
-        ref={(el) => {
-          sectionsRef.current["projects"] = el;
-        }}
-      >
+        Skip to main content
+      </a>
+
+      <main id="main-content">
+        <HeroSection />
         <ProjectsSection />
-      </div>
-      
-      <div
-        ref={(el) => {
-          sectionsRef.current["experience"] = el;
-        }}
-      >
         <ExperienceSection />
-      </div>
-      
-      <div
-        ref={(el) => {
-          sectionsRef.current["contact"] = el;
-        }}
-      >
+        <SkillsSection />
+        <AboutSection />
         <ContactSection />
-      </div>
-      
+      </main>
+
       <Footer />
-      
-      {/* Floating Action Navigation */}
       <FloatingActionNavigation />
-    </main>
+    </div>
   );
 };

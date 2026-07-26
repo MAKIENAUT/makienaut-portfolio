@@ -44,6 +44,20 @@ html {
   scroll-behavior: smooth;
 }
 
+section[id] {
+  scroll-margin-top: 1.5rem;
+}
+
+::selection {
+  background: var(--brand-primary);
+  color: #000;
+}
+
+:where(a, button, [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 2px solid var(--brand-primary);
+  outline-offset: 4px;
+}
+
 body {
   color: rgb(var(--foreground-rgb));
   background: rgb(var(--background-rgb));
@@ -239,5 +253,20 @@ body::before {
   body::before {
     background-image:
       radial-gradient(circle at 50% 30%, rgba(255, 215, 0, 0.008) 0%, transparent 85%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto !important;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
   }
 }

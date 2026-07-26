@@ -18,7 +18,7 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
       <div className="max-w-6xl mx-auto">
         <div className="text-center mb-gap-lg">
           <Typography variant="overline" color="yellow" className="mb-2">
-            03. Portfolio
+            01. Selected Work
           </Typography>
           <Typography variant="h2" color="white" font="spaceGrotesk">
             Featured Projects
@@ -29,14 +29,19 @@ export const ProjectsSection: React.FC<ProjectsSectionProps> = ({
             font="poppins"
             className="mx-auto mt-4 max-w-2xl leading-relaxed"
           >
-            A mix of client work, academic delivery, and business systems that reflect how I build:
-            practical scope, clean execution, and measurable outcomes.
+            Selected client and academic projects, with the responsibilities and
+            technology behind each delivery.
           </Typography>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-gap-md">
-          {projects.map((project) => (
-            <ProjectCard key={project.id} project={project} />
+        <div className="grid grid-cols-1 items-stretch gap-gap-lg lg:grid-cols-2">
+          {projects.map((project, index) => (
+            <ProjectCard
+              key={project.id}
+              project={project}
+              featured={index === 0}
+              className={index === 0 ? "lg:col-span-2" : ""}
+            />
           ))}
         </div>
       </div>
