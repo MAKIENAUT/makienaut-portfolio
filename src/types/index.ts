@@ -1,3 +1,5 @@
+import type { ReactElement } from "react";
+
 export interface Project {
   id: number;
   title: string;
@@ -20,7 +22,7 @@ export interface Experience {
 export interface Skill {
   id: number;
   name: string;
-  icon: JSX.Element;
+  icon: ReactElement;
 }
 
 export interface NavLink {
@@ -30,7 +32,7 @@ export interface NavLink {
 }
 
 export interface SocialLink {
-  icon: JSX.Element;
+  icon: ReactElement;
   href: string;
   label: string;
 }

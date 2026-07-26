@@ -34,3 +34,33 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+
+## VroomBroom
+
+The helmet-cleaning experience is available at:
+
+- Landing page: `/orb-weaver`
+- Private back-office: `/orb-weaver/backoffice`
+
+Copy `.env.example` to `.env.local`, then add the Vercel Prisma Postgres
+credentials and back-office secrets. The local file is ignored by Git.
+
+Generate a secure password hash:
+
+```bash
+npm run auth:hash
+```
+
+The command prints both `ORBW_BACKOFFICE_PASSWORD_HASH` and a new
+`ORBW_AUTH_SECRET`. Add both values to `.env.local` for development and to the
+Vercel project environment for production.
+
+Generate the Prisma client and apply the committed migration:
+
+```bash
+npm run db:generate
+npm run db:deploy
+```
+
+Vercel uses the `vercel-build` script to generate Prisma Client, apply pending
+production migrations, and build the Next.js application.
