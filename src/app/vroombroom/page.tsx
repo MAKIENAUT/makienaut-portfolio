@@ -344,7 +344,7 @@ export default function OrbWeaverPage() {
         <div className="mx-auto flex max-w-7xl flex-col gap-5 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between">
           <p>© {new Date().getFullYear()} VroomBroom. Ride fresh.</p>
           <Link
-            href="/orb-weaver/backoffice"
+            href="/vroombroom/backoffice"
             className="inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-2 text-stone-500 transition hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
           >
             <FaLock aria-hidden="true" />

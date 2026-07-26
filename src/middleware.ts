@@ -5,11 +5,11 @@ import {
 } from "@/lib/orb-weaver/session";
 
 const isLoginPath = (pathname: string) =>
-  pathname === "/orb-weaver/backoffice/login";
+  pathname === "/vroombroom/backoffice/login";
 
 const isBackofficePath = (pathname: string) =>
-  pathname === "/orb-weaver/backoffice" ||
-  pathname.startsWith("/orb-weaver/backoffice/");
+  pathname === "/vroombroom/backoffice" ||
+  pathname.startsWith("/vroombroom/backoffice/");
 
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -20,8 +20,8 @@ export async function middleware(request: NextRequest) {
 
   const sessionToken = request.cookies.get(ORB_WEAVER_SESSION_COOKIE)?.value;
   const hasSession = await verifyOrbWeaverSession(sessionToken);
-  const loginPath = "/orb-weaver/backoffice/login";
-  const dashboardPath = "/orb-weaver/backoffice";
+  const loginPath = "/vroombroom/backoffice/login";
+  const dashboardPath = "/vroombroom/backoffice";
 
   if (isLoginPath(pathname) && hasSession) {
     return NextResponse.redirect(new URL(dashboardPath, request.url));
@@ -35,5 +35,5 @@ export async function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/orb-weaver/backoffice/:path*"],
+  matcher: ["/vroombroom/backoffice/:path*"],
 };

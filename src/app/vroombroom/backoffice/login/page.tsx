@@ -16,7 +16,7 @@ export default async function OrbWeaverBackofficeLoginPage() {
   const session = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
 
   if (await verifyOrbWeaverSession(session)) {
-    redirect("/orb-weaver/backoffice");
+    redirect("/vroombroom/backoffice");
   }
 
   return (
@@ -27,7 +27,7 @@ export default async function OrbWeaverBackofficeLoginPage() {
       />
       <div className="relative w-full max-w-md">
         <Link
-          href="/orb-weaver"
+          href="/vroombroom"
           className="mb-6 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm text-stone-400 transition hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
         >
           <FaArrowLeft aria-hidden="true" />

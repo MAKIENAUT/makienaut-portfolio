@@ -12,7 +12,7 @@ export function OrbWeaverLogoutButton() {
     try {
       await fetch("/api/orb-weaver/session", { method: "DELETE" });
     } finally {
-      window.location.assign("/orb-weaver/backoffice/login");
+      window.location.assign("/vroombroom/backoffice/login");
     }
   };
 

@@ -9,13 +9,13 @@ export const metadata: Metadata = {
   description:
     "Book careful, appointment-based helmet cleaning with VroomBroom.",
   alternates: {
-    canonical: "https://orb-weaver.xyz/orb-weaver",
+    canonical: "https://orb-weaver.xyz/vroombroom",
   },
   openGraph: {
     title: "VroomBroom | Independent Helmet Cleaning",
     description:
       "A simple, care-first helmet cleaning service for everyday riders.",
-    url: "https://orb-weaver.xyz/orb-weaver",
+    url: "https://orb-weaver.xyz/vroombroom",
     siteName: "VroomBroom",
     type: "website",
     images: [

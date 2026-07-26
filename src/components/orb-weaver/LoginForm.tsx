@@ -26,7 +26,7 @@ export function OrbWeaverLoginForm() {
         throw new Error(result.message || "Sign-in failed.");
       }
 
-      window.location.assign("/orb-weaver/backoffice");
+      window.location.assign("/vroombroom/backoffice");
     } catch (submissionError) {
       setError(
         submissionError instanceof Error

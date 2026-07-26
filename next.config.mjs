@@ -4,6 +4,20 @@ const nextConfig = {
   // an active `next dev` process from reading a partially rewritten `.next`
   // directory when `next build` runs in another terminal.
   distDir: process.env.NODE_ENV === "development" ? ".next-dev" : ".next",
+  async redirects() {
+    return [
+      {
+        source: "/orb-weaver",
+        destination: "/vroombroom",
+        permanent: true,
+      },
+      {
+        source: "/orb-weaver/:path*",
+        destination: "/vroombroom/:path*",
+        permanent: true,
+      },
+    ];
+  },
 };
 
 export default nextConfig;

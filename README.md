@@ -39,8 +39,8 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 
 The helmet-cleaning experience is available at:
 
-- Landing page: `/orb-weaver`
-- Private back-office: `/orb-weaver/backoffice`
+- Landing page: `/vroombroom`
+- Private back-office: `/vroombroom/backoffice`
 
 Copy `.env.example` to `.env.local`, then add the Vercel Prisma Postgres
 credentials and back-office secrets. The local file is ignored by Git.
