@@ -20,8 +20,8 @@ export const metadata: Metadata = {
     type: "website",
     images: [
       {
-        url: "/vroombroom.png",
-        width: 1536,
+        url: "/vroombroom-og.jpg",
+        width: 1024,
         height: 1024,
         alt: "VroomBroom rider logo",
       },

@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { poppins } from "@/styles/fonts";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -34,8 +33,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${poppins.className} bg-black text-white antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className="bg-black font-sans text-white antialiased">
         {children}
       </body>
     </html>

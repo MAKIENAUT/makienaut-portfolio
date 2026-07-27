@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import {
   type ComponentType,
   type KeyboardEvent,
@@ -7,30 +8,39 @@ import {
   useEffect,
   useRef,
   useState,
+  useTransition,
 } from "react";
 import {
   FaCalendarCheck,
   FaClipboardList,
   FaHome,
-  FaQuoteLeft,
+  FaMapMarkerAlt,
   FaSprayCan,
 } from "react-icons/fa";
 import { GiSpiderWeb } from "react-icons/gi";
 import type { IconBaseProps } from "react-icons";
 
 const sections: Array<{
+  href?: string;
   id: string;
   label: string;
   icon: ComponentType<IconBaseProps>;
 }> = [
   { id: "ow-home", label: "Home", icon: FaHome },
   { id: "ow-services", label: "Services", icon: FaSprayCan },
+  { id: "ow-location", label: "Meetup", icon: FaMapMarkerAlt },
   { id: "ow-process", label: "Process", icon: FaClipboardList },
-  { id: "ow-booking", label: "Book", icon: FaCalendarCheck },
-  { id: "ow-stories", label: "Stories", icon: FaQuoteLeft },
+  {
+    id: "ow-booking",
+    href: "/vroombroom/book",
+    label: "Book",
+    icon: FaCalendarCheck,
+  },
 ];
 
 export function OrbWeaverSectionFab() {
+  const router = useRouter();
+  const [isNavigating, startNavigation] = useTransition();
   const [isOpen, setIsOpen] = useState(false);
   const [activeSection, setActiveSection] = useState(sections[0].id);
   const triggerRef = useRef<HTMLButtonElement>(null);
@@ -160,6 +170,23 @@ export function OrbWeaverSectionFab() {
 
   return (
     <>
+      {isNavigating && (
+        <div
+          role="status"
+          aria-live="polite"
+          className="pointer-events-none fixed inset-x-0 top-0 z-[200] flex justify-center"
+        >
+          <span className="absolute inset-x-0 top-0 h-1 animate-pulse bg-amber-400" />
+          <span className="mt-4 inline-flex items-center gap-2 rounded-full border border-amber-300/20 bg-[#10110f]/95 px-4 py-2 text-xs font-semibold text-amber-100 shadow-xl backdrop-blur-xl">
+            <span
+              aria-hidden="true"
+              className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-amber-300 border-r-transparent"
+            />
+            Opening booking…
+          </span>
+        </div>
+      )}
+
       {isOpen && (
         <button
           type="button"
@@ -205,10 +232,20 @@ export function OrbWeaverSectionFab() {
                   ref={(element) => {
                     itemRefs.current[index] = element;
                   }}
-                  href={`#${section.id}`}
+                  href={section.href ?? `#${section.id}`}
                   tabIndex={isOpen ? 0 : -1}
                   aria-current={isActive ? "location" : undefined}
-                  onClick={(event) => handleLinkClick(event, section.id)}
+                  onClick={(event) => {
+                    if (section.href) {
+                      const href = section.href;
+                      event.preventDefault();
+                      setIsOpen(false);
+                      startNavigation(() => router.push(href));
+                      return;
+                    }
+
+                    handleLinkClick(event, section.id);
+                  }}
                   onKeyDown={(event) => handleKeyDown(event, index)}
                   className={`group relative flex h-[3.25rem] w-[3.25rem] items-center justify-center rounded-full border text-lg shadow-xl transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-black ${
                     isActive

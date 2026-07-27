@@ -38,13 +38,14 @@ export default async function OrbWeaverBackofficePage() {
       <header className="border-b border-white/[0.08] bg-[#0d0f0c]/90 backdrop-blur-xl">
         <div className="mx-auto flex max-w-[90rem] flex-col gap-4 px-5 py-5 sm:flex-row sm:items-center sm:justify-between sm:px-8">
           <div className="flex items-center gap-4">
-            <span className="flex h-12 w-20 items-center justify-center">
+            <span className="flex h-12 w-12 items-center justify-center">
               <Image
-                src="/vroombroom.png"
+                src="/vroombroom-thumb.webp"
                 alt=""
-                width={120}
-                height={80}
-                className="h-auto w-full object-contain"
+                width={96}
+                height={96}
+                unoptimized
+                className="h-full w-full rounded-xl object-cover"
               />
             </span>
             <div>

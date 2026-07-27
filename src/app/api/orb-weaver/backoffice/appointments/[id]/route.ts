@@ -27,7 +27,23 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
   try {
     const { id } = await context.params;
-    const body = (await request.json()) as { status?: unknown };
+    const parsedBody = await request.json().catch(() => null);
+
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+        id
+      ) ||
+      !parsedBody ||
+      typeof parsedBody !== "object" ||
+      Array.isArray(parsedBody)
+    ) {
+      return NextResponse.json(
+        { message: "Choose a valid appointment status." },
+        { status: 400 }
+      );
+    }
+
+    const body = parsedBody as { status?: unknown };
     const status = typeof body.status === "string" ? body.status : "";
 
     if (

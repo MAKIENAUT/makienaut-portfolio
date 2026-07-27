@@ -25,7 +25,17 @@ model OrbWeaverAppointment {
   helmetCount       Int               @default(1)
   preferredDate     DateTime          @db.Date
   preferredWindow   String            @db.VarChar(30)
-  notes             String?           @db.VarChar(1000)
+  handoffMethod     String?           @db.VarChar(30)
+  handoffWindow     String?           @db.VarChar(80)
+  completionWindow  String?           @db.VarChar(80)
+  pickupArea        String?           @db.VarChar(180)
+  pickupLatitude    Decimal?          @db.Decimal(9, 6)
+  pickupLongitude   Decimal?          @db.Decimal(9, 6)
+  requestedAddOns   Json?             @db.JsonB
+  serviceUnitPrice  Int?
+  addOnSubtotal     Int?
+  estimatedSubtotal Int?
+  notes             String?           @db.VarChar(1600)
   status            AppointmentStatus @default(PENDING)
   sourceFingerprint String?           @db.VarChar(64)
   createdAt         DateTime          @default(now()) @db.Timestamptz(3)

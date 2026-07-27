@@ -1,22 +1,31 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaCalendarCheck,
   FaCheckCircle,
   FaClock,
   FaEnvelope,
+  FaExternalLinkAlt,
+  FaMapMarkerAlt,
   FaMotorcycle,
   FaPhoneAlt,
   FaSearch,
+  FaSyncAlt,
 } from "react-icons/fa";
 import {
+  ORB_WEAVER_LEGACY_SERVICE_NAMES,
+  ORB_WEAVER_LEGACY_TIME_WINDOW_NAMES,
   ORB_WEAVER_SERVICES,
   ORB_WEAVER_STATUSES,
   ORB_WEAVER_TIME_WINDOWS,
   type OrbWeaverAppointmentRecord,
   type OrbWeaverAppointmentStatus,
 } from "@/types/orb-weaver";
+import {
+  getOrbWeaverPickupDirectionsUrl,
+  getOrbWeaverPickupMapUrl,
+} from "@/lib/orb-weaver/location";
 
 interface AppointmentsDashboardProps {
   initialAppointments: OrbWeaverAppointmentRecord[];
@@ -51,11 +60,20 @@ const formatDate = (date: string) =>
 
 const serviceName = (serviceId: string) =>
   ORB_WEAVER_SERVICES.find((service) => service.id === serviceId)?.name ??
+  ORB_WEAVER_LEGACY_SERVICE_NAMES[serviceId] ??
   serviceId;
 
 const timeWindowName = (windowId: string) =>
   ORB_WEAVER_TIME_WINDOWS.find((window) => window.id === windowId)?.name ??
+  ORB_WEAVER_LEGACY_TIME_WINDOW_NAMES[windowId] ??
   windowId;
+
+const formatPeso = (amount: number) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(amount);
 
 export function AppointmentsDashboard({
   initialAppointments,
@@ -66,7 +84,61 @@ export function AppointmentsDashboard({
   );
   const [query, setQuery] = useState("");
   const [updatingId, setUpdatingId] = useState<string>();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
+
+  const refreshAppointments = useCallback(async (silent = false) => {
+    if (!silent) {
+      setIsRefreshing(true);
+      setError("");
+    }
+
+    try {
+      const response = await fetch("/api/orb-weaver/backoffice/appointments", {
+        cache: "no-store",
+      });
+      const result = (await response.json()) as {
+        appointments?: OrbWeaverAppointmentRecord[];
+        message?: string;
+      };
+
+      if (!response.ok || !result.appointments) {
+        throw new Error(result.message || "Appointments could not be refreshed.");
+      }
+
+      setAppointments(result.appointments);
+    } catch (refreshError) {
+      if (!silent) {
+        setError(
+          refreshError instanceof Error
+            ? refreshError.message
+            : "Appointments could not be refreshed."
+        );
+      }
+    } finally {
+      if (!silent) {
+        setIsRefreshing(false);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    const refreshIfVisible = () => {
+      if (document.visibilityState === "visible") {
+        void refreshAppointments(true);
+      }
+    };
+    const intervalId = window.setInterval(refreshIfVisible, 30_000);
+
+    window.addEventListener("focus", refreshIfVisible);
+    document.addEventListener("visibilitychange", refreshIfVisible);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", refreshIfVisible);
+      document.removeEventListener("visibilitychange", refreshIfVisible);
+    };
+  }, [refreshAppointments]);
 
   const filteredAppointments = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -78,7 +150,14 @@ export function AppointmentsDashboard({
         appointment.reference.toLowerCase().includes(normalizedQuery) ||
         appointment.customerName.toLowerCase().includes(normalizedQuery) ||
         appointment.phone.toLowerCase().includes(normalizedQuery) ||
-        appointment.email.toLowerCase().includes(normalizedQuery);
+        appointment.email.toLowerCase().includes(normalizedQuery) ||
+        appointment.pickupArea?.toLowerCase().includes(normalizedQuery) ||
+        serviceName(appointment.service)
+          .toLowerCase()
+          .includes(normalizedQuery) ||
+        appointment.requestedAddOns.some((addOn) =>
+          addOn.name.toLowerCase().includes(normalizedQuery)
+        );
 
       return matchesStatus && matchesQuery;
     });
@@ -199,22 +278,36 @@ export function AppointmentsDashboard({
               </p>
             </div>
 
-            <div className="relative w-full lg:max-w-xs">
-              <FaSearch
-                aria-hidden="true"
-                className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
-              />
-              <label htmlFor="appointment-search" className="sr-only">
-                Search appointments
-              </label>
-              <input
-                id="appointment-search"
-                type="search"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search reference, name, or contact"
-                className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-amber-300 focus:ring-2 focus:ring-amber-300/20"
-              />
+            <div className="flex w-full gap-2 lg:max-w-md">
+              <div className="relative min-w-0 flex-1">
+                <FaSearch
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
+                />
+                <label htmlFor="appointment-search" className="sr-only">
+                  Search appointments
+                </label>
+                <input
+                  id="appointment-search"
+                  type="search"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder="Search reference, name, or contact"
+                  className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-amber-300 focus:ring-2 focus:ring-amber-300/20"
+                />
+              </div>
+              <button
+                type="button"
+                disabled={isRefreshing}
+                onClick={() => void refreshAppointments()}
+                className="inline-flex min-h-11 shrink-0 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-semibold text-stone-300 transition hover:border-amber-300/30 hover:text-amber-200 disabled:cursor-wait disabled:opacity-60"
+              >
+                <FaSyncAlt
+                  aria-hidden="true"
+                  className={isRefreshing ? "animate-spin" : ""}
+                />
+                <span className="sr-only sm:not-sr-only">Refresh</span>
+              </button>
             </div>
           </div>
 
@@ -260,102 +353,202 @@ export function AppointmentsDashboard({
           </div>
         ) : (
           <div className="divide-y divide-white/[0.07]">
-            {filteredAppointments.map((appointment) => (
-              <article
-                key={appointment.id}
-                className="grid gap-5 p-5 transition hover:bg-white/[0.02] sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1fr)_auto] xl:items-center"
-              >
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <h3 className="font-semibold text-white">
-                      {appointment.customerName}
-                    </h3>
-                    <span
-                      className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold ${statusClasses[appointment.status]}`}
-                    >
-                      {statusLabels[appointment.status]}
-                    </span>
-                  </div>
-                  <p className="mt-2 font-mono text-xs font-semibold tracking-wider text-amber-300">
-                    Ref: {appointment.reference}
-                  </p>
-                  <div className="mt-3 flex flex-col gap-2 text-sm text-stone-400">
-                    <a
-                      href={`tel:${appointment.phone}`}
-                      className="inline-flex items-center gap-2 hover:text-amber-300"
-                    >
-                      <FaPhoneAlt aria-hidden="true" className="text-xs" />
-                      {appointment.phone}
-                    </a>
-                    {appointment.email && (
-                      <a
-                        href={`mailto:${appointment.email}`}
-                        className="inline-flex items-center gap-2 break-all hover:text-amber-300"
+            {filteredAppointments.map((appointment) => {
+              const pickupPoint =
+                appointment.pickupLatitude !== null &&
+                appointment.pickupLongitude !== null
+                  ? {
+                      latitude: appointment.pickupLatitude,
+                      longitude: appointment.pickupLongitude,
+                    }
+                  : null;
+              const handoffLabel =
+                appointment.handoffMethod === "pickup_return"
+                  ? "Pickup"
+                  : "Drop-off";
+              const completionLabel =
+                appointment.handoffMethod === "pickup_return"
+                  ? "Return"
+                  : "Claim";
+
+              return (
+                <article
+                  key={appointment.id}
+                  className="grid gap-5 p-5 transition hover:bg-white/[0.02] sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] xl:items-center"
+                >
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <h3 className="font-semibold text-white">
+                        {appointment.customerName}
+                      </h3>
+                      <span
+                        className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold ${statusClasses[appointment.status]}`}
                       >
-                        <FaEnvelope aria-hidden="true" className="text-xs" />
-                        {appointment.email}
+                        {statusLabels[appointment.status]}
+                      </span>
+                    </div>
+                    <p className="mt-2 font-mono text-xs font-semibold tracking-wider text-amber-300">
+                      Ref: {appointment.reference}
+                    </p>
+                    <div className="mt-3 flex flex-col gap-2 text-sm text-stone-400">
+                      <a
+                        href={`tel:${appointment.phone}`}
+                        className="inline-flex items-center gap-2 hover:text-amber-300"
+                      >
+                        <FaPhoneAlt aria-hidden="true" className="text-xs" />
+                        {appointment.phone}
                       </a>
+                      {appointment.email && (
+                        <a
+                          href={`mailto:${appointment.email}`}
+                          className="inline-flex items-center gap-2 break-all hover:text-amber-300"
+                        >
+                          <FaEnvelope aria-hidden="true" className="text-xs" />
+                          {appointment.email}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-sm">
+                    <p className="font-medium text-stone-200">
+                      {serviceName(appointment.service)}
+                    </p>
+                    <p className="mt-1 text-stone-500">
+                      {appointment.helmetCount}{" "}
+                      {appointment.helmetCount === 1 ? "helmet" : "helmets"}
+                      {appointment.serviceUnitPrice !== null &&
+                        ` · ${formatPeso(appointment.serviceUnitPrice)} each`}
+                    </p>
+                    {appointment.requestedAddOns.length > 0 && (
+                      <div className="mt-3 border-t border-white/[0.07] pt-3">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
+                          Add-ons
+                        </p>
+                        <ul className="mt-2 space-y-1.5 text-xs text-stone-400">
+                          {appointment.requestedAddOns.map((addOn) => (
+                            <li
+                              key={addOn.id}
+                              className="flex items-start justify-between gap-3"
+                            >
+                              <span>
+                                {addOn.name}
+                                {addOn.quantity > 1 && ` × ${addOn.quantity}`}
+                              </span>
+                              <span className="shrink-0 text-stone-300">
+                                {formatPeso(addOn.subtotal)}
+                              </span>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                    {appointment.estimatedSubtotal !== null && (
+                      <p className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3 font-semibold text-amber-300">
+                        <span>Estimated subtotal</span>
+                        <span>{formatPeso(appointment.estimatedSubtotal)}</span>
+                      </p>
                     )}
                   </div>
-                </div>
 
-                <div className="text-sm">
-                  <p className="font-medium text-stone-200">
-                    {serviceName(appointment.service)}
-                  </p>
-                  <p className="mt-1 text-stone-500">
-                    {appointment.helmetCount}{" "}
-                    {appointment.helmetCount === 1 ? "helmet" : "helmets"}
-                  </p>
-                </div>
-
-                <div className="text-sm">
-                  <p className="font-medium text-stone-200">
-                    {formatDate(appointment.preferredDate)}
-                  </p>
-                  <p className="mt-1 text-stone-500">
-                    {timeWindowName(appointment.preferredWindow)}
-                  </p>
-                  {appointment.notes && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer text-xs text-amber-300">
-                        Customer note
-                      </summary>
-                      <p className="mt-2 max-w-md whitespace-pre-wrap text-xs leading-5 text-stone-400">
-                        {appointment.notes}
+                  <div className="text-sm">
+                    <p className="font-medium text-stone-200">
+                      {formatDate(appointment.preferredDate)}
+                    </p>
+                    <p className="mt-1 text-stone-400">
+                      <span className="text-stone-500">{handoffLabel}:</span>{" "}
+                      {appointment.handoffWindow ??
+                        timeWindowName(appointment.preferredWindow)}
+                    </p>
+                    {appointment.completionWindow && (
+                      <p className="mt-1 text-stone-400">
+                        <span className="text-stone-500">
+                          {completionLabel}:
+                        </span>{" "}
+                        {appointment.completionWindow}
                       </p>
-                    </details>
-                  )}
-                </div>
+                    )}
+                    <div className="mt-3 border-t border-white/[0.07] pt-3">
+                      <p className="flex items-start gap-2 font-medium text-stone-300">
+                        <FaMapMarkerAlt
+                          aria-hidden="true"
+                          className="mt-0.5 shrink-0 text-amber-300"
+                        />
+                        {appointment.handoffMethod === "pickup_return"
+                          ? "Pickup + return"
+                          : appointment.handoffMethod === "drop_off"
+                          ? "Customer drop-off at meetup"
+                          : "Handoff not recorded"}
+                      </p>
+                      {appointment.pickupArea && (
+                        <p className="mt-1 pl-5 text-xs leading-5 text-stone-500">
+                          {appointment.pickupArea}
+                        </p>
+                      )}
+                      {pickupPoint && (
+                        <div className="mt-2 flex flex-wrap gap-2 pl-5">
+                          <a
+                            href={getOrbWeaverPickupMapUrl(pickupPoint)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-300/[0.07] px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400 hover:text-black"
+                          >
+                            <FaMapMarkerAlt aria-hidden="true" />
+                            View pin
+                          </a>
+                          <a
+                            href={getOrbWeaverPickupDirectionsUrl(pickupPoint)}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-stone-300 transition hover:border-amber-300/30 hover:text-amber-200"
+                          >
+                            <FaExternalLinkAlt aria-hidden="true" />
+                            Directions
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    {appointment.notes && (
+                      <details className="mt-2">
+                        <summary className="cursor-pointer text-xs text-amber-300">
+                          Customer note
+                        </summary>
+                        <p className="mt-2 max-w-md whitespace-pre-wrap text-xs leading-5 text-stone-400">
+                          {appointment.notes}
+                        </p>
+                      </details>
+                    )}
+                  </div>
 
-                <div>
-                  <label
-                    htmlFor={`status-${appointment.id}`}
-                    className="mb-1.5 block text-xs text-stone-500"
-                  >
-                    Update status
-                  </label>
-                  <select
-                    id={`status-${appointment.id}`}
-                    value={appointment.status}
-                    disabled={updatingId === appointment.id}
-                    onChange={(event) =>
-                      updateStatus(
-                        appointment.id,
-                        event.target.value as OrbWeaverAppointmentStatus
-                      )
-                    }
-                    className="min-h-11 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-stone-200 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-300/20 disabled:cursor-wait disabled:opacity-60"
-                  >
-                    {ORB_WEAVER_STATUSES.map((status) => (
-                      <option key={status} value={status}>
-                        {statusLabels[status]}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              </article>
-            ))}
+                  <div>
+                    <label
+                      htmlFor={`status-${appointment.id}`}
+                      className="mb-1.5 block text-xs text-stone-500"
+                    >
+                      Update status
+                    </label>
+                    <select
+                      id={`status-${appointment.id}`}
+                      value={appointment.status}
+                      disabled={updatingId === appointment.id}
+                      onChange={(event) =>
+                        updateStatus(
+                          appointment.id,
+                          event.target.value as OrbWeaverAppointmentStatus
+                        )
+                      }
+                      className="min-h-11 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-stone-200 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-300/20 disabled:cursor-wait disabled:opacity-60"
+                    >
+                      {ORB_WEAVER_STATUSES.map((status) => (
+                        <option key={status} value={status}>
+                          {statusLabels[status]}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </article>
+              );
+            })}
           </div>
         )}
       </section>

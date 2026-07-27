@@ -36,13 +36,14 @@ export default async function OrbWeaverBackofficeLoginPage() {
 
         <section className="rounded-[2rem] border border-amber-300/15 bg-[#10110f]/95 p-6 shadow-[0_30px_100px_rgba(0,0,0,0.5)] sm:p-8">
           <div className="flex items-center gap-4">
-            <span className="flex h-14 w-20 items-center justify-center">
+            <span className="flex h-14 w-14 items-center justify-center">
               <Image
-                src="/vroombroom.png"
+                src="/vroombroom-thumb.webp"
                 alt=""
-                width={120}
-                height={80}
-                className="h-auto w-full object-contain"
+                width={96}
+                height={96}
+                unoptimized
+                className="h-full w-full rounded-xl object-cover"
               />
             </span>
             <div>

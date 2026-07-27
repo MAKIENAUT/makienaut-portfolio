@@ -1,16 +1,32 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import {
   type FormEvent,
+  useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { FaCalendarCheck, FaCheckCircle } from "react-icons/fa";
 import {
+  FaArrowLeft,
+  FaArrowRight,
+  FaCheck,
+  FaCheckCircle,
+  FaChevronDown,
+  FaMotorcycle,
+  FaStore,
+} from "react-icons/fa";
+import {
+  ORB_WEAVER_ADD_ONS,
   ORB_WEAVER_SERVICES,
   ORB_WEAVER_TIME_WINDOWS,
+  type OrbWeaverServiceId,
+  type OrbWeaverTimeWindow,
 } from "@/types/orb-weaver";
+import { BookingSchedulePicker } from "@/components/orb-weaver/BookingSchedulePicker";
+import { PendingNavigationLink } from "@/components/orb-weaver/PendingNavigationLink";
+import type { OrbWeaverGeoPoint } from "@/lib/orb-weaver/location";
 
 type FormState =
   | { status: "idle"; message?: undefined; reference?: undefined }
@@ -18,9 +34,58 @@ type FormState =
   | { status: "success"; message: string; reference?: string }
   | { status: "error"; message: string; reference?: undefined };
 
+interface AppointmentFormProps {
+  initialServiceId?: OrbWeaverServiceId;
+}
+
+type ReviewValues = Record<string, string>;
+
+const CustomerLocationPicker = dynamic(
+  () =>
+    import("@/components/orb-weaver/CustomerLocationPicker").then(
+      (module) => module.CustomerLocationPicker
+    ),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-48 items-center justify-center rounded-2xl border border-white/10 bg-black/20 text-sm text-stone-500 sm:h-56">
+        Loading pickup map…
+      </div>
+    ),
+  }
+);
+
+const steps = [
+  {
+    label: "Contact",
+    title: "How can we reach you?",
+    description: "We only use these details to confirm this booking.",
+  },
+  {
+    label: "Cleaning",
+    title: "Choose your helmet care",
+    description: "Pick a cleaning option and any useful extras.",
+  },
+  {
+    label: "Schedule",
+    title: "Choose a handoff schedule",
+    description:
+      "Choose how the helmet changes hands, then allow at least a 2-hour cleaning buffer.",
+  },
+  {
+    label: "Review",
+    title: "Review your request",
+    description: "Check the essentials before sending it to VroomBroom.",
+  },
+] as const;
+
 const inputClasses =
-  "min-h-12 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition placeholder:text-stone-500 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20";
-const labelClasses = "mb-2 block text-sm font-medium text-stone-200";
+  "min-h-11 w-full rounded-xl border border-white/10 bg-black/35 px-3.5 py-2.5 text-sm text-white outline-none transition placeholder:text-stone-500 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20";
+const labelClasses = "mb-1.5 block text-sm font-medium text-stone-200";
+const isAddOnIncluded = (
+  addOn: (typeof ORB_WEAVER_ADD_ONS)[number],
+  serviceId: OrbWeaverServiceId | ""
+) => (addOn.includedIn as readonly string[]).includes(serviceId);
 
 const getManilaToday = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -35,15 +100,264 @@ const getManilaToday = () => {
   return `${part("year")}-${part("month")}-${part("day")}`;
 };
 
-export function AppointmentForm() {
+const formatReviewDate = (value?: string) => {
+  if (!value) {
+    return "Not selected";
+  }
+
+  return new Intl.DateTimeFormat("en-PH", {
+    timeZone: "Asia/Manila",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00+08:00`));
+};
+
+export function AppointmentForm({
+  initialServiceId,
+}: AppointmentFormProps) {
+  const [currentStep, setCurrentStep] = useState(0);
   const [formState, setFormState] = useState<FormState>({ status: "idle" });
+  const [selectedService, setSelectedService] = useState<
+    OrbWeaverServiceId | ""
+  >(initialServiceId ?? "");
+  const [helmetCount, setHelmetCount] = useState(
+    initialServiceId === "multiple_helmets" ? 2 : 1
+  );
+  const [selectedAddOns, setSelectedAddOns] = useState<string[]>([]);
+  const [handoff, setHandoff] = useState<"drop_off" | "pickup_return">(
+    "drop_off"
+  );
+  const [pickupLocation, setPickupLocation] =
+    useState<OrbWeaverGeoPoint | null>(null);
+  const [pickupLocationError, setPickupLocationError] = useState("");
+  const [preferredDate, setPreferredDate] = useState("");
+  const [preferredWindow, setPreferredWindow] = useState<
+    OrbWeaverTimeWindow | ""
+  >("");
+  const [scheduleError, setScheduleError] = useState("");
+  const [reviewValues, setReviewValues] = useState<ReviewValues>({});
+  const formRef = useRef<HTMLFormElement>(null);
+  const stepHeadingRef = useRef<HTMLHeadingElement>(null);
   const feedbackRef = useRef<HTMLDivElement>(null);
+  const hasMountedRef = useRef(false);
   const minimumDate = useMemo(getManilaToday, []);
+  const selectedServiceDetails = ORB_WEAVER_SERVICES.find(
+    (service) => service.id === selectedService
+  );
+  const selectedTimeWindow = ORB_WEAVER_TIME_WINDOWS.find(
+    (window) => window.id === reviewValues.preferredWindow
+  );
+  const addOnSubtotal = ORB_WEAVER_ADD_ONS.reduce((total, addOn) => {
+    if (
+      !selectedAddOns.includes(addOn.id) ||
+      isAddOnIncluded(addOn, selectedService)
+    ) {
+      return total;
+    }
+
+    return total + addOn.price * (addOn.perBooking ? 1 : helmetCount);
+  }, 0);
+  const estimatedSubtotal = selectedServiceDetails
+    ? selectedServiceDetails.price * helmetCount + addOnSubtotal
+    : 0;
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
+    window.requestAnimationFrame(() => {
+      stepHeadingRef.current?.focus({ preventScroll: true });
+      window.scrollTo({
+        top: 0,
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+          ? "auto"
+          : "smooth",
+      });
+    });
+  }, [currentStep]);
+
+  const selectService = (serviceId: OrbWeaverServiceId) => {
+    const service = ORB_WEAVER_SERVICES.find(
+      (option) => option.id === serviceId
+    );
+
+    if (!service?.available) {
+      return;
+    }
+
+    setSelectedService(serviceId);
+    setHelmetCount(serviceId === "multiple_helmets" ? 2 : 1);
+    setSelectedAddOns((current) =>
+      current.filter((addOnId) => {
+        const addOn = ORB_WEAVER_ADD_ONS.find(
+          (option) => option.id === addOnId
+        );
+
+        return addOn && !isAddOnIncluded(addOn, serviceId);
+      })
+    );
+  };
+
+  const toggleAddOn = (addOnId: string) => {
+    setSelectedAddOns((current) =>
+      current.includes(addOnId)
+        ? current.filter((id) => id !== addOnId)
+        : [...current, addOnId]
+    );
+  };
+
+  const validateStep = (stepIndex: number) => {
+    const panel = formRef.current?.querySelector<HTMLElement>(
+      `[data-form-step="${stepIndex}"]`
+    );
+    const customerNameControl =
+      panel?.querySelector<HTMLInputElement>("#orb-name");
+    const phoneControl =
+      panel?.querySelector<HTMLInputElement>("#orb-phone");
+
+    if (customerNameControl) {
+      customerNameControl.setCustomValidity(
+        customerNameControl.value.trim().length >= 2
+          ? ""
+          : "Enter your name using at least 2 characters."
+      );
+    }
+
+    if (phoneControl) {
+      const digitCount = phoneControl.value.replace(/\D/g, "").length;
+      phoneControl.setCustomValidity(
+        digitCount >= 7 && digitCount <= 15
+          ? ""
+          : "Enter a mobile number containing 7 to 15 digits."
+      );
+    }
+
+    const controls = Array.from(
+      panel?.querySelectorAll<
+        HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement
+      >("input, select, textarea") ?? []
+    );
+    const invalidControl = controls.find(
+      (control) => control.willValidate && !control.checkValidity()
+    );
+
+    if (invalidControl) {
+      invalidControl.reportValidity();
+      invalidControl.focus({ preventScroll: true });
+      invalidControl.scrollIntoView({ behavior: "smooth", block: "center" });
+      return false;
+    }
+
+    if (stepIndex === 2 && (!preferredDate || !preferredWindow)) {
+      setScheduleError("Choose an available date and handoff time.");
+      const schedulePicker = document.getElementById("orb-booking-schedule");
+      schedulePicker?.scrollIntoView({ behavior: "smooth", block: "center" });
+      schedulePicker?.focus({ preventScroll: true });
+      return false;
+    }
+
+    setScheduleError("");
+
+    if (
+      stepIndex === 2 &&
+      handoff === "pickup_return" &&
+      !pickupLocation
+    ) {
+      setPickupLocationError(
+        "Use your current location or tap the map to place a pickup pin."
+      );
+      const locationPicker = document.getElementById("orb-pickup-location");
+      locationPicker?.scrollIntoView({ behavior: "smooth", block: "center" });
+      locationPicker?.focus({ preventScroll: true });
+      return false;
+    }
+
+    return true;
+  };
+
+  const captureReviewValues = () => {
+    if (!formRef.current) {
+      return;
+    }
+
+    const values: ReviewValues = {};
+    new FormData(formRef.current).forEach((value, key) => {
+      if (typeof value === "string") {
+        values[key] = value;
+      }
+    });
+    setReviewValues(values);
+  };
+
+  const goToNextStep = () => {
+    if (!validateStep(currentStep)) {
+      return;
+    }
+
+    if (currentStep === steps.length - 2) {
+      captureReviewValues();
+    }
+
+    setCurrentStep((step) => Math.min(step + 1, steps.length - 1));
+  };
+
+  const goToPreviousStep = () => {
+    setFormState({ status: "idle" });
+    setCurrentStep((step) => Math.max(step - 1, 0));
+  };
+
+  const startOver = () => {
+    formRef.current?.reset();
+    setFormState({ status: "idle" });
+    setCurrentStep(0);
+    setSelectedService(initialServiceId ?? "");
+    setHelmetCount(initialServiceId === "multiple_helmets" ? 2 : 1);
+    setSelectedAddOns([]);
+    setHandoff("drop_off");
+    setPickupLocation(null);
+    setPickupLocationError("");
+    setPreferredDate("");
+    setPreferredWindow("");
+    setScheduleError("");
+    setReviewValues({});
+  };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (currentStep < steps.length - 1) {
+      goToNextStep();
+      return;
+    }
+
+    if (!validateStep(currentStep)) {
+      return;
+    }
+
+    if (handoff === "pickup_return" && !pickupLocation) {
+      setCurrentStep(2);
+      window.requestAnimationFrame(() => {
+        setPickupLocationError(
+          "Use your current location or tap the map to place a pickup pin."
+        );
+      });
+      return;
+    }
+
     const form = event.currentTarget;
     const formData = new FormData(form);
+    const payload: Record<string, unknown> = Object.fromEntries(
+      formData.entries()
+    );
+    const customerNote = String(formData.get("notes") ?? "").trim();
+    payload.addOnIds = formData.getAll("addOns").map(String);
+    payload.contactConsent = formData.get("contactConsent") === "on";
+    payload.notes = customerNote;
+    delete payload.addOns;
+    delete payload.scheduleWindowChoice;
 
     setFormState({ status: "submitting" });
 
@@ -51,7 +365,7 @@ export function AppointmentForm() {
       const response = await fetch("/api/orb-weaver/appointments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(Object.fromEntries(formData.entries())),
+        body: JSON.stringify(payload),
       });
       const result = (await response.json()) as {
         message?: string;
@@ -85,27 +399,126 @@ export function AppointmentForm() {
     }
   };
 
+  if (formState.status === "success") {
+    return (
+      <div
+        ref={feedbackRef}
+        tabIndex={-1}
+        role="status"
+        className="rounded-[1.75rem] border border-emerald-300/20 bg-[#10110f]/95 p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.4)] outline-none sm:p-8"
+      >
+        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-300 text-2xl text-black">
+          <FaCheckCircle aria-hidden="true" />
+        </span>
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
+          Request received
+        </p>
+        <h2 className="mt-2 text-2xl font-semibold text-white">
+          Your helmet reset is in the queue.
+        </h2>
+        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-stone-400">
+          {formState.message}
+        </p>
+        {formState.reference && (
+          <div className="mx-auto mt-5 max-w-xs rounded-xl border border-white/10 bg-black/25 px-4 py-3">
+            <p className="text-xs text-stone-500">Booking reference</p>
+            <p className="mt-1 font-semibold tracking-wide text-amber-200">
+              {formState.reference}
+            </p>
+          </div>
+        )}
+        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <PendingNavigationLink
+            href="/vroombroom"
+            pendingLabel="Returning…"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-5 py-2.5 text-sm font-semibold text-white transition hover:border-amber-300/40"
+          >
+            Back to VroomBroom
+          </PendingNavigationLink>
+          <button
+            type="button"
+            onClick={startOver}
+            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300"
+          >
+            Make another request
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <form
+      ref={formRef}
       onSubmit={handleSubmit}
-      className="rounded-[2rem] border border-amber-300/15 bg-[#10110f]/95 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.4)] sm:p-8"
+      noValidate
+      className="overflow-hidden rounded-[1.75rem] border border-amber-300/15 bg-[#10110f]/95 shadow-[0_24px_80px_rgba(0,0,0,0.4)]"
     >
-      <div className="mb-8 flex items-start gap-4">
-        <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-amber-400 text-xl text-black">
-          <FaCalendarCheck aria-hidden="true" />
-        </span>
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-300">
-            Appointment request
+      <div className="border-b border-white/[0.08] px-5 py-4 sm:px-6">
+        <div className="mb-3 flex items-center justify-between gap-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-300">
+            {steps[currentStep].label}
           </p>
-          <h3 className="mt-1 text-2xl font-semibold text-white">
-            Pick what works for you
-          </h3>
-          <p className="mt-2 text-sm leading-relaxed text-stone-400">
-            Send your preferred schedule. It becomes final after VroomBroom
-            contacts you to confirm.
+          <p className="text-xs text-stone-500">
+            {Math.round(((currentStep + 1) / steps.length) * 100)}% complete
           </p>
         </div>
+        <ol aria-label="Booking progress" className="grid grid-cols-4 gap-2">
+          {steps.map((step, index) => {
+            const isComplete = index < currentStep;
+            const isCurrent = index === currentStep;
+
+            return (
+              <li key={step.label}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (index < currentStep) {
+                      setCurrentStep(index);
+                    }
+                  }}
+                  disabled={index > currentStep}
+                  aria-current={isCurrent ? "step" : undefined}
+                  className={`w-full text-left ${
+                    index < currentStep ? "cursor-pointer" : "cursor-default"
+                  }`}
+                >
+                  <span
+                    className={`block h-1.5 rounded-full transition ${
+                      isComplete || isCurrent
+                        ? "bg-amber-400"
+                        : "bg-white/10"
+                    }`}
+                  />
+                  <span
+                    className={`mt-1.5 hidden text-[0.65rem] sm:block ${
+                      isCurrent
+                        ? "font-semibold text-amber-200"
+                        : isComplete
+                        ? "text-stone-300"
+                        : "text-stone-600"
+                    }`}
+                  >
+                    {step.label}
+                  </span>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+      </div>
+
+      <div className="px-5 pb-2 pt-5 sm:px-6">
+        <h2
+          ref={stepHeadingRef}
+          tabIndex={-1}
+          className="text-xl font-semibold text-white outline-none sm:text-2xl"
+        >
+          {steps[currentStep].title}
+        </h2>
+        <p className="mt-1.5 text-sm leading-6 text-stone-400">
+          {steps[currentStep].description}
+        </p>
       </div>
 
       <div
@@ -122,198 +535,517 @@ export function AppointmentForm() {
         />
       </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <div className="sm:col-span-2">
-          <label htmlFor="orb-name" className={labelClasses}>
-            Your name
-          </label>
-          <input
-            id="orb-name"
-            name="customerName"
-            type="text"
-            minLength={2}
-            maxLength={100}
-            autoComplete="name"
-            required
-            placeholder="Juan Dela Cruz"
-            className={inputClasses}
-          />
+      <div className="px-5 pb-6 pt-4 sm:px-6">
+        <div data-form-step="0" hidden={currentStep !== 0}>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="orb-name" className={labelClasses}>
+                Your name
+              </label>
+              <input
+                id="orb-name"
+                name="customerName"
+                type="text"
+                minLength={2}
+                maxLength={100}
+                autoComplete="name"
+                required
+                placeholder="Juan Dela Cruz"
+                className={inputClasses}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="orb-phone" className={labelClasses}>
+                Mobile number
+              </label>
+              <input
+                id="orb-phone"
+                name="phone"
+                type="tel"
+                minLength={7}
+                maxLength={40}
+                autoComplete="tel"
+                required
+                placeholder="+63 9XX XXX XXXX"
+                className={inputClasses}
+              />
+            </div>
+
+            <div>
+              <label htmlFor="orb-email" className={labelClasses}>
+                Email <span className="text-stone-500">(optional)</span>
+              </label>
+              <input
+                id="orb-email"
+                name="email"
+                type="email"
+                maxLength={160}
+                autoComplete="email"
+                placeholder="you@example.com"
+                className={inputClasses}
+              />
+            </div>
+          </div>
         </div>
 
-        <div>
-          <label htmlFor="orb-phone" className={labelClasses}>
-            Mobile number
-          </label>
-          <input
-            id="orb-phone"
-            name="phone"
-            type="tel"
-            minLength={7}
-            maxLength={40}
-            autoComplete="tel"
-            required
-            placeholder="+63 9XX XXX XXXX"
-            className={inputClasses}
-          />
+        <div data-form-step="1" hidden={currentStep !== 1}>
+          <fieldset>
+            <legend className={labelClasses}>Choose your clean</legend>
+            <div className="grid items-start gap-2.5 sm:grid-cols-2">
+              {ORB_WEAVER_SERVICES.map((service) => {
+                const isSelected = selectedService === service.id;
+
+                return (
+                  <div
+                    key={service.id}
+                    className={`relative h-fit overflow-hidden rounded-xl border transition ${
+                      isSelected
+                        ? "border-amber-300 bg-amber-300/10 ring-2 ring-amber-300/15"
+                        : !service.available
+                        ? "border-white/[0.07] bg-white/[0.02] opacity-70"
+                        : "border-white/10 bg-black/20 hover:border-amber-300/35"
+                    }`}
+                  >
+                    <label
+                      className={`block p-3 ${
+                        service.available
+                          ? "cursor-pointer"
+                          : "cursor-not-allowed"
+                      }`}
+                    >
+                      <input
+                        type="radio"
+                        name="service"
+                        value={service.id}
+                        checked={isSelected}
+                        required
+                        disabled={!service.available}
+                        onChange={() => selectService(service.id)}
+                        className="sr-only"
+                      />
+                      <span className="flex items-start justify-between gap-3">
+                        <span>
+                          <span className="flex flex-wrap items-center gap-1.5">
+                            <span className="text-sm font-semibold text-white">
+                              {service.name}
+                            </span>
+                            {service.popular && (
+                              <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-black">
+                                Popular
+                              </span>
+                            )}
+                            {!service.available && (
+                              <span className="rounded-full border border-white/10 bg-white/[0.06] px-1.5 py-0.5 text-[0.5rem] font-bold uppercase tracking-wide text-stone-300">
+                                Coming soon
+                              </span>
+                            )}
+                          </span>
+                          <span className="mt-0.5 block text-[0.7rem] leading-4 text-stone-500">
+                            {service.shortDescription}
+                          </span>
+                        </span>
+                        <span className="flex shrink-0 items-center gap-2 text-right text-sm font-semibold text-amber-200">
+                          <span>₱{service.price}</span>
+                          {isSelected && (
+                            <span className="flex h-5 w-5 items-center justify-center rounded-full bg-amber-400 text-[0.55rem] text-black">
+                              <FaCheck aria-hidden="true" />
+                            </span>
+                          )}
+                        </span>
+                      </span>
+                    </label>
+
+                    <details className="group border-t border-white/[0.08]">
+                      <summary className="flex min-h-10 cursor-pointer list-none items-center justify-between gap-3 px-3 py-2 text-[0.68rem] font-semibold uppercase tracking-wide text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-300 [&::-webkit-details-marker]:hidden">
+                        What&apos;s included
+                        <FaChevronDown
+                          aria-hidden="true"
+                          className="shrink-0 transition-transform duration-200 group-open:rotate-180"
+                        />
+                      </summary>
+                      <ul className="space-y-2 border-t border-white/[0.06] px-3 py-3 text-xs leading-5 text-stone-400">
+                        {service.inclusions.map((inclusion) => (
+                          <li
+                            key={inclusion}
+                            className="flex items-start gap-2"
+                          >
+                            <span
+                              aria-hidden="true"
+                              className="mt-0.5 shrink-0 text-amber-300"
+                            >
+                              ✓
+                            </span>
+                            {inclusion}
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  </div>
+                );
+              })}
+            </div>
+          </fieldset>
+
+          {selectedService === "multiple_helmets" ? (
+            <div className="mt-4">
+              <label htmlFor="orb-count" className={labelClasses}>
+                Number of helmets
+              </label>
+              <input
+                id="orb-count"
+                name="helmetCount"
+                type="number"
+                min={2}
+                max={10}
+                value={helmetCount}
+                onChange={(event) =>
+                  setHelmetCount(
+                    Math.min(10, Math.max(2, Number(event.target.value) || 2))
+                  )
+                }
+                required
+                inputMode="numeric"
+                className={inputClasses}
+              />
+            </div>
+          ) : (
+            <input type="hidden" name="helmetCount" value="1" />
+          )}
+
+          <fieldset className="mt-4">
+            <legend className={labelClasses}>
+              Add-ons <span className="text-stone-500">(optional)</span>
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {ORB_WEAVER_ADD_ONS.map((addOn) => {
+                const isSelected = selectedAddOns.includes(addOn.id);
+                const isIncluded = isAddOnIncluded(addOn, selectedService);
+
+                return (
+                  <label
+                    key={addOn.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2.5 text-xs transition ${
+                      isIncluded
+                        ? "cursor-default border-emerald-300/20 bg-emerald-300/[0.06] text-stone-400"
+                        : isSelected
+                        ? "border-amber-300/50 bg-amber-300/10 text-white"
+                        : "cursor-pointer border-white/10 bg-black/20 text-stone-300 hover:border-amber-300/30"
+                    }`}
+                  >
+                    <span className="flex items-center gap-2">
+                      <input
+                        type="checkbox"
+                        name="addOns"
+                        value={addOn.id}
+                        checked={isSelected}
+                        disabled={isIncluded}
+                        onChange={() => toggleAddOn(addOn.id)}
+                        className="h-4 w-4 rounded border-white/20 bg-black accent-amber-400"
+                      />
+                      {addOn.name}
+                    </span>
+                    <span
+                      className={`shrink-0 font-semibold ${
+                        isIncluded ? "text-emerald-300" : "text-amber-200"
+                      }`}
+                    >
+                      {isIncluded ? "Included" : `+₱${addOn.price}`}
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+          </fieldset>
         </div>
 
-        <div>
-          <label htmlFor="orb-email" className={labelClasses}>
-            Email <span className="text-stone-500">(optional)</span>
-          </label>
-          <input
-            id="orb-email"
-            name="email"
-            type="email"
-            maxLength={160}
-            autoComplete="email"
-            placeholder="you@example.com"
-            className={inputClasses}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="orb-service" className={labelClasses}>
-            Cleaning service
-          </label>
-          <select
-            id="orb-service"
-            name="service"
-            required
-            defaultValue=""
-            className={inputClasses}
-          >
-            <option value="" disabled>
-              Choose a service
-            </option>
-            {ORB_WEAVER_SERVICES.map((service) => (
-              <option key={service.id} value={service.id}>
-                {service.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label htmlFor="orb-count" className={labelClasses}>
-            Number of helmets
-          </label>
-          <input
-            id="orb-count"
-            name="helmetCount"
-            type="number"
-            min={1}
-            max={10}
-            defaultValue={1}
-            required
-            inputMode="numeric"
-            className={inputClasses}
-          />
-        </div>
-
-        <div>
-          <label htmlFor="orb-date" className={labelClasses}>
-            Preferred date
-          </label>
-          <input
-            id="orb-date"
-            name="preferredDate"
-            type="date"
-            min={minimumDate}
-            required
-            className={`${inputClasses} [color-scheme:dark]`}
-          />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="orb-window" className={labelClasses}>
-            Preferred time
-          </label>
-          <select
-            id="orb-window"
-            name="preferredWindow"
-            required
-            defaultValue=""
-            className={inputClasses}
-          >
-            <option value="" disabled>
-              Choose a time window
-            </option>
-            {ORB_WEAVER_TIME_WINDOWS.map((window) => (
-              <option key={window.id} value={window.id}>
-                {window.name}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="orb-notes" className={labelClasses}>
-            Notes <span className="text-stone-500">(optional)</span>
-          </label>
-          <textarea
-            id="orb-notes"
-            name="notes"
-            rows={4}
-            maxLength={1000}
-            placeholder="Helmet model, condition, or anything we should know."
-            className={`${inputClasses} resize-y`}
-          />
-        </div>
-      </div>
-
-      <label className="mt-5 flex cursor-pointer items-start gap-3 text-sm leading-relaxed text-stone-400">
-        <input
-          type="checkbox"
-          required
-          className="mt-1 h-4 w-4 rounded border-white/20 bg-black text-amber-400 accent-amber-400"
-        />
-        <span>
-          I agree to be contacted about this appointment request. No payment is
-          collected through this form.
-        </span>
-      </label>
-
-      <button
-        type="submit"
-        disabled={formState.status === "submitting"}
-        className="mt-7 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3 font-semibold text-black transition hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-[#10110f] disabled:cursor-wait disabled:opacity-60"
-      >
-        {formState.status === "submitting"
-          ? "Sending request…"
-          : "Request appointment"}
-      </button>
-
-      {formState.status !== "idle" &&
-        formState.status !== "submitting" && (
-          <div
-            ref={feedbackRef}
-            tabIndex={-1}
-            role={formState.status === "error" ? "alert" : "status"}
-            className={`mt-5 rounded-xl border p-4 text-sm outline-none ${
-              formState.status === "success"
-                ? "border-emerald-400/25 bg-emerald-400/10 text-emerald-100"
-                : "border-red-400/25 bg-red-400/10 text-red-100"
-            }`}
-          >
-            <div className="flex items-start gap-3">
-              {formState.status === "success" && (
-                <FaCheckCircle
-                  className="mt-0.5 shrink-0 text-emerald-300"
-                  aria-hidden="true"
+        <div data-form-step="2" hidden={currentStep !== 2}>
+          <fieldset>
+            <legend className={labelClasses}>Handoff method</legend>
+            <div className="grid gap-2.5 sm:grid-cols-2">
+              <label
+                className={`cursor-pointer rounded-xl border p-3 transition ${
+                  handoff === "drop_off"
+                    ? "border-amber-300 bg-amber-300/10"
+                    : "border-white/10 bg-black/20 hover:border-amber-300/35"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="handoff"
+                  value="drop_off"
+                  checked={handoff === "drop_off"}
+                  onChange={() => {
+                    setHandoff("drop_off");
+                    setPickupLocation(null);
+                    setPickupLocationError("");
+                  }}
+                  className="sr-only"
                 />
-              )}
-              <p>
-                {formState.message}
-                {formState.reference && (
-                  <span className="mt-1 block font-semibold">
-                    Reference: {formState.reference}
+                <span className="flex items-start gap-2.5">
+                  <FaStore
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-amber-300"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-white">
+                      I&apos;ll drop it off
+                    </span>
+                    <span className="mt-0.5 block text-[0.7rem] leading-4 text-stone-500">
+                      Free return delivery within 10 km
+                    </span>
                   </span>
-                )}
+                </span>
+              </label>
+
+              <label
+                className={`cursor-pointer rounded-xl border p-3 transition ${
+                  handoff === "pickup_return"
+                    ? "border-amber-300 bg-amber-300/10"
+                    : "border-white/10 bg-black/20 hover:border-amber-300/35"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="handoff"
+                  value="pickup_return"
+                  checked={handoff === "pickup_return"}
+                  onChange={() => {
+                    setHandoff("pickup_return");
+                    setPickupLocationError("");
+                  }}
+                  className="sr-only"
+                />
+                <span className="flex items-start gap-2.5">
+                  <FaMotorcycle
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-amber-300"
+                  />
+                  <span>
+                    <span className="block text-sm font-semibold text-white">
+                      Pickup + return
+                    </span>
+                    <span className="mt-0.5 block text-[0.7rem] leading-4 text-stone-500">
+                      From ₱30; free for 2+ helmets within 10 km
+                    </span>
+                  </span>
+                </span>
+              </label>
+            </div>
+          </fieldset>
+
+          <div id="orb-booking-schedule" tabIndex={-1}>
+            <BookingSchedulePicker
+              error={scheduleError}
+              handoffMethod={handoff}
+              minimumDate={minimumDate}
+              selectedDate={preferredDate}
+              selectedWindow={preferredWindow}
+              onDateChange={(value) => {
+                setPreferredDate(value);
+                setScheduleError("");
+              }}
+              onWindowChange={(value) => {
+                setPreferredWindow(value);
+                setScheduleError("");
+              }}
+            />
+          </div>
+
+          {handoff === "pickup_return" && currentStep >= 2 && (
+            <div className="mt-4">
+              <CustomerLocationPicker
+                compact
+                value={pickupLocation}
+                error={pickupLocationError}
+                onChange={(location) => {
+                  setPickupLocation(location);
+                  setPickupLocationError("");
+                }}
+              />
+
+              <div className="mt-4">
+                <label htmlFor="orb-pickup-area" className={labelClasses}>
+                  Address or nearby landmark{" "}
+                  <span className="text-stone-500">(optional)</span>
+                </label>
+                <input
+                  id="orb-pickup-area"
+                  name="pickupArea"
+                  type="text"
+                  maxLength={180}
+                  autoComplete="street-address"
+                  placeholder="House/building, street, barangay, or landmark"
+                  className={inputClasses}
+                />
+              </div>
+            </div>
+          )}
+        </div>
+
+        <div data-form-step="3" hidden={currentStep !== 3}>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Cleaning
+              </p>
+              <p className="mt-1.5 text-sm font-semibold text-white">
+                {selectedServiceDetails?.name ?? "Not selected"}
+                {helmetCount > 1 ? ` · ${helmetCount} helmets` : ""}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                {selectedAddOns.length
+                  ? `${selectedAddOns.length} add-on${
+                      selectedAddOns.length === 1 ? "" : "s"
+                    } selected`
+                  : "No paid add-ons"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Schedule
+              </p>
+              <p className="mt-1.5 text-sm font-semibold text-white">
+                {formatReviewDate(reviewValues.preferredDate)}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                {selectedTimeWindow?.name ?? "No time selected"}
+              </p>
+            </div>
+
+            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5 sm:col-span-2">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                Handoff
+              </p>
+              <p className="mt-1.5 text-sm font-semibold text-white">
+                {handoff === "pickup_return"
+                  ? "Pickup + return"
+                  : "Customer drop-off + return"}
+              </p>
+              <p className="mt-1 text-xs text-stone-500">
+                {handoff === "pickup_return"
+                  ? reviewValues.pickupArea ||
+                    "Pinned location saved with this request"
+                  : "Meetup details will be confirmed with you"}
               </p>
             </div>
           </div>
+
+          <div className="mt-4">
+            <label htmlFor="orb-notes" className={labelClasses}>
+              Notes <span className="text-stone-500">(optional)</span>
+            </label>
+            <textarea
+              id="orb-notes"
+              name="notes"
+              rows={3}
+              maxLength={700}
+              placeholder="Helmet model, condition, or anything we should know."
+              className={`${inputClasses} resize-y`}
+            />
+          </div>
+
+          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.17em] text-amber-300">
+                Estimated subtotal
+              </p>
+              <p className="mt-1 text-[0.7rem] leading-4 text-stone-500">
+                Transport is confirmed separately.
+              </p>
+            </div>
+            <p className="shrink-0 text-2xl font-semibold text-white">
+              {selectedServiceDetails
+                ? `₱${estimatedSubtotal}`
+                : "Not available"}
+            </p>
+          </div>
+
+          <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-5 text-stone-400">
+            <input
+              type="checkbox"
+              name="contactConsent"
+              required
+              className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-black accent-amber-400"
+            />
+            <span>
+              I agree to be contacted about this request. No payment is
+              collected here, and a pickup pin is only used to coordinate this
+              booking.
+            </span>
+          </label>
+        </div>
+
+        {pickupLocation && (
+          <>
+            <input
+              type="hidden"
+              name="pickupLatitude"
+              value={pickupLocation.latitude}
+            />
+            <input
+              type="hidden"
+              name="pickupLongitude"
+              value={pickupLocation.longitude}
+            />
+          </>
         )}
+
+        {formState.status === "error" && (
+          <div
+            ref={feedbackRef}
+            tabIndex={-1}
+            role="alert"
+            className="mt-4 rounded-xl border border-red-400/25 bg-red-400/10 p-3.5 text-sm text-red-100 outline-none"
+          >
+            {formState.message}
+          </div>
+        )}
+      </div>
+
+      <div className="flex items-center justify-between gap-3 border-t border-white/[0.08] bg-black/15 px-5 py-4 sm:px-6">
+        {currentStep === 0 ? (
+          <PendingNavigationLink
+            href="/vroombroom"
+            pendingLabel="Returning…"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-stone-400 transition hover:text-white"
+          >
+            <FaArrowLeft aria-hidden="true" className="text-xs" />
+            Exit
+          </PendingNavigationLink>
+        ) : (
+          <button
+            type="button"
+            onClick={goToPreviousStep}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl px-2 text-sm font-semibold text-stone-300 transition hover:text-white"
+          >
+            <FaArrowLeft aria-hidden="true" className="text-xs" />
+            Back
+          </button>
+        )}
+
+        {currentStep < steps.length - 1 ? (
+          <button
+            type="button"
+            onClick={goToNextStep}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300"
+          >
+            Continue
+            <FaArrowRight aria-hidden="true" className="text-xs" />
+          </button>
+        ) : (
+          <button
+            type="submit"
+            disabled={formState.status === "submitting"}
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300 disabled:cursor-wait disabled:opacity-60"
+          >
+            {formState.status === "submitting"
+              ? "Sending…"
+              : "Request appointment"}
+          </button>
+        )}
+      </div>
     </form>
   );
 }
