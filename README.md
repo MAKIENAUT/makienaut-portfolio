@@ -40,6 +40,7 @@ Check out our [Next.js deployment documentation](https://nextjs.org/docs/deploym
 The helmet-cleaning experience is available at:
 
 - Landing page: `/vroombroom`
+- Customer order tracking: `/vroombroom/orders`
 - Private back-office: `/vroombroom/backoffice`
 
 Copy `.env.example` to `.env.local`, then add the Vercel Prisma Postgres
@@ -61,6 +62,9 @@ Generate the Prisma client and apply the committed migration:
 npm run db:generate
 npm run db:deploy
 ```
+
+For an isolated hosted development database and backoffice, see
+[`docs/vroombroom-development.md`](docs/vroombroom-development.md).
 
 Vercel uses the `vercel-build` script to generate Prisma Client, apply pending
 production migrations, and build the Next.js application.

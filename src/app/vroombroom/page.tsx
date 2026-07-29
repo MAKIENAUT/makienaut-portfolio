@@ -1,13 +1,12 @@
 import Image, { getImageProps } from "next/image";
-import Link from "next/link";
 import {
   FaArrowRight,
   FaCalendarCheck,
   FaChevronDown,
   FaExternalLinkAlt,
-  FaLock,
   FaMapMarkerAlt,
   FaMotorcycle,
+  FaReceipt,
   FaShieldAlt,
   FaSprayCan,
 } from "react-icons/fa";
@@ -15,6 +14,7 @@ import { GiBubbles } from "react-icons/gi";
 import { OrbWeaverSectionFab } from "@/components/orb-weaver/SectionFab";
 import { PendingNavigationLink } from "@/components/orb-weaver/PendingNavigationLink";
 import { PublicMeetupMap } from "@/components/orb-weaver/PublicMeetupMap";
+import { ResponsiveDetails } from "@/components/orb-weaver/ResponsiveDetails";
 import { ServiceBookingLink } from "@/components/orb-weaver/ServiceBookingLink";
 import {
   ORB_WEAVER_ADD_ONS,
@@ -147,15 +147,29 @@ export default function OrbWeaverPage() {
             </span>
           </a>
 
-          <PendingNavigationLink
-            eagerPrefetch
-            href="/vroombroom/book"
-            pendingLabel="Opening…"
-            className="inline-flex min-h-11 items-center gap-2 rounded-full border border-amber-300/30 bg-amber-300/10 px-4 py-2 text-sm font-semibold text-amber-200 transition hover:bg-amber-400 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
-          >
-            Book a clean
-            <FaArrowRight aria-hidden="true" className="text-xs" />
-          </PendingNavigationLink>
+          <div className="flex items-center gap-1.5 sm:gap-2">
+            <PendingNavigationLink
+              href="/vroombroom/orders"
+              pendingLabel="Opening…"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full px-3 py-2 text-xs font-semibold text-stone-300 transition hover:bg-white/[0.06] hover:text-amber-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 sm:px-4 sm:text-sm"
+            >
+              <FaReceipt aria-hidden="true" />
+              <span className="hidden min-[390px]:inline">Track order</span>
+              <span className="min-[390px]:hidden">Track</span>
+            </PendingNavigationLink>
+            <PendingNavigationLink
+              eagerPrefetch
+              href="/vroombroom/book"
+              pendingLabel="Opening…"
+              className="inline-flex min-h-11 items-center gap-2 rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-400 hover:text-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-black sm:px-4 sm:text-sm"
+            >
+              Book a clean
+              <FaArrowRight
+                aria-hidden="true"
+                className="hidden text-xs sm:block"
+              />
+            </PendingNavigationLink>
+          </div>
         </div>
       </header>
 
@@ -213,6 +227,14 @@ export default function OrbWeaverPage() {
                   <FaCalendarCheck aria-hidden="true" />
                   Request an appointment
                 </PendingNavigationLink>
+                <PendingNavigationLink
+                  href="/vroombroom/orders"
+                  pendingLabel="Opening orders…"
+                  className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl border border-amber-300/30 bg-amber-300/[0.08] px-6 py-3 font-semibold text-amber-100 transition hover:bg-amber-300/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
+                >
+                  <FaReceipt aria-hidden="true" />
+                  Check my order
+                </PendingNavigationLink>
                 <a
                   href="#ow-services"
                   className="inline-flex min-h-12 items-center justify-center gap-3 rounded-xl border border-white/15 bg-white/5 px-6 py-3 font-semibold text-white transition hover:border-amber-300/50 hover:bg-amber-300/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 focus-visible:ring-offset-4 focus-visible:ring-offset-black"
@@ -251,8 +273,8 @@ export default function OrbWeaverPage() {
           className="scroll-mt-6 border-y border-white/[0.07] bg-[#0e100d] px-5 py-12 sm:px-8 sm:py-20 lg:px-12"
         >
           <div className="mx-auto max-w-7xl">
-            <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:items-end">
-              <div>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,0.9fr)_minmax(28rem,1.1fr)] lg:items-end lg:gap-12">
+              <div className="max-w-xl">
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-amber-300">
                   Cleaning options
                 </p>
@@ -262,18 +284,19 @@ export default function OrbWeaverPage() {
               </div>
               <p className="max-w-2xl text-sm leading-6 text-stone-400 lg:justify-self-end">
                 Straightforward prices, useful extras, and no surprise charges.
-                Tap an option to see what is included.
+                Compare what is included, then choose the clean that fits.
               </p>
             </div>
 
-            <div className="mt-8 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-8 grid items-stretch gap-3 sm:grid-cols-2 lg:grid-cols-3">
               {ORB_WEAVER_SERVICES.map((service, index) => {
                 const Icon = serviceIcons[index];
 
                 return (
-                  <details
+                  <ResponsiveDetails
+                    desktopOpen
                     key={service.id}
-                    className={`group h-fit overflow-hidden rounded-2xl border transition hover:border-amber-300/40 ${
+                    className={`group self-start overflow-hidden rounded-2xl border transition open:self-stretch hover:border-amber-300/40 lg:flex lg:flex-col ${
                       service.popular
                         ? "border-amber-300/30 bg-amber-300/[0.07]"
                         : !service.available
@@ -326,7 +349,7 @@ export default function OrbWeaverPage() {
                       </div>
                     </summary>
 
-                    <div className="border-t border-white/[0.08] px-4 pb-4 pt-3">
+                    <div className="border-t border-white/[0.08] px-4 pb-4 pt-3 lg:flex lg:flex-1 lg:flex-col">
                       <p className="mb-3 text-xs leading-5 text-stone-500 sm:hidden">
                         {service.shortDescription}
                       </p>
@@ -349,7 +372,7 @@ export default function OrbWeaverPage() {
                       {service.available ? (
                         <ServiceBookingLink
                           serviceId={service.id}
-                          className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+                          className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-xl bg-amber-400 px-3 py-2 text-xs font-semibold text-black transition hover:bg-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300 lg:mt-auto"
                         >
                           Choose this clean
                           <FaArrowRight
@@ -358,18 +381,21 @@ export default function OrbWeaverPage() {
                           />
                         </ServiceBookingLink>
                       ) : (
-                        <span className="mt-4 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-semibold text-stone-500">
+                        <span className="mt-4 inline-flex min-h-10 w-full cursor-not-allowed items-center justify-center rounded-xl border border-white/10 bg-white/[0.035] px-3 py-2 text-xs font-semibold text-stone-500 lg:mt-auto">
                           Coming soon
                         </span>
                       )}
                     </div>
-                  </details>
+                  </ResponsiveDetails>
                 );
               })}
             </div>
 
-            <div className="mt-6 grid gap-3 lg:grid-cols-2">
-              <details className="group overflow-hidden rounded-2xl border border-white/[0.08] bg-black/20">
+            <div className="mt-6 grid gap-3">
+              <ResponsiveDetails
+                desktopOpen
+                className="group overflow-hidden rounded-2xl border border-white/[0.08] bg-black/20 lg:grid lg:grid-cols-[minmax(15rem,0.34fr)_minmax(0,1fr)]"
+              >
                 <summary className="cursor-pointer list-none p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-300 sm:p-5 [&::-webkit-details-marker]:hidden">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-amber-300/20 bg-amber-300/10 text-amber-300">
@@ -389,11 +415,11 @@ export default function OrbWeaverPage() {
                     />
                   </div>
                 </summary>
-                <div className="grid border-t border-white/[0.08] px-4 py-2 sm:grid-cols-2 sm:px-5">
+                <div className="grid border-t border-white/[0.08] px-4 py-2 sm:grid-cols-2 sm:px-5 lg:grid lg:grid-cols-3 lg:border-l lg:border-t-0">
                   {ORB_WEAVER_ADD_ONS.map((addOn) => (
                     <div
                       key={addOn.id}
-                      className="flex items-center justify-between gap-4 border-b border-white/[0.06] py-2.5 text-sm last:border-0 sm:[&:nth-last-child(-n+2)]:border-b-0"
+                      className="flex items-center justify-between gap-4 border-b border-white/[0.06] py-2.5 text-sm last:border-0 sm:[&:nth-last-child(-n+2)]:border-b-0 lg:border-b-0 lg:border-r lg:px-4 lg:first:pl-0 lg:last:border-r-0 lg:last:pr-0"
                     >
                       <span className="text-stone-300">{addOn.name}</span>
                       <span className="shrink-0 font-semibold text-amber-200">
@@ -402,9 +428,12 @@ export default function OrbWeaverPage() {
                     </div>
                   ))}
                 </div>
-              </details>
+              </ResponsiveDetails>
 
-              <details className="group overflow-hidden rounded-2xl border border-amber-300/15 bg-amber-300/[0.05]">
+              <ResponsiveDetails
+                desktopOpen
+                className="group overflow-hidden rounded-2xl border border-amber-300/15 bg-amber-300/[0.05]"
+              >
                 <summary className="cursor-pointer list-none p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-amber-300 sm:p-5 [&::-webkit-details-marker]:hidden">
                   <div className="flex items-center gap-3">
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-400 text-black">
@@ -425,8 +454,8 @@ export default function OrbWeaverPage() {
                   </div>
                 </summary>
 
-                <div className="border-t border-white/[0.08] p-4 sm:p-5">
-                  <div className="grid gap-2 sm:grid-cols-2">
+                <div className="border-t border-white/[0.08] p-4 sm:p-5 lg:block">
+                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
                     {deliveryOptions.map((option) => (
                       <div
                         key={`${option.label}-${option.distance}`}
@@ -459,7 +488,7 @@ export default function OrbWeaverPage() {
                     first.
                   </div>
                 </div>
-              </details>
+              </ResponsiveDetails>
             </div>
           </div>
         </section>
@@ -499,6 +528,9 @@ export default function OrbWeaverPage() {
                     />
                     {ORB_WEAVER_MEETUP.name}
                   </p>
+                  <p className="mt-1 pl-6 text-xs font-medium text-amber-100/80 sm:pl-7 sm:text-sm">
+                    {ORB_WEAVER_MEETUP.label}
+                  </p>
                   <p className="mt-2 text-xs leading-5 text-stone-400 sm:mt-3 sm:text-sm sm:leading-6">
                     This is VroomBroom&apos;s public meetup point—not a private
                     home address. Every handoff is scheduled and confirmed
@@ -508,7 +540,7 @@ export default function OrbWeaverPage() {
 
                 <ul className="mt-4 space-y-2 text-xs leading-5 text-stone-300 sm:mt-6 sm:space-y-3 sm:text-sm sm:leading-6">
                   {[
-                    "Drop-off customers meet here at the confirmed time.",
+                    "Drop-off customers meet on Belton Drive at the confirmed time.",
                     "Delivery distance and fees are confirmed before handoff.",
                   ].map((item) => (
                     <li key={item} className="flex items-start gap-2.5 sm:gap-3">
@@ -585,15 +617,8 @@ export default function OrbWeaverPage() {
       </main>
 
       <footer className="border-t border-white/[0.08] px-5 py-8 sm:px-8 lg:px-12">
-        <div className="mx-auto flex max-w-7xl flex-col gap-5 text-sm text-stone-500 sm:flex-row sm:items-center sm:justify-between">
+        <div className="mx-auto max-w-7xl text-sm text-stone-500">
           <p>© {new Date().getFullYear()} VroomBroom. Ride fresh.</p>
-          <Link
-            href="/vroombroom/backoffice"
-            className="inline-flex min-h-11 items-center gap-2 self-start rounded-lg px-2 text-stone-500 transition hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-          >
-            <FaLock aria-hidden="true" />
-            Owner access
-          </Link>
         </div>
       </footer>
 

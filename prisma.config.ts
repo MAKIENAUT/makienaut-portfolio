@@ -5,6 +5,9 @@ loadEnvironment({ path: ".env.local", quiet: true });
 loadEnvironment({ quiet: true });
 
 const databaseUrl =
+  (process.env.NODE_ENV !== "production"
+    ? process.env.ORBW_DEV_DATABASE_URL
+    : undefined) ||
   process.env.OW_MAIN_DB_DATABASE_URL ||
   process.env.DATABASE_URL ||
   process.env.OW_MAIN_DB_POSTGRES_URL ||

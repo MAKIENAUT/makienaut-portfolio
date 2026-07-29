@@ -195,8 +195,60 @@ export interface OrbWeaverAppointmentRecord {
   serviceUnitPrice: number | null;
   addOnSubtotal: number | null;
   estimatedSubtotal: number | null;
+  deliveryDistanceKm: number | null;
+  deliveryFee: number | null;
+  deliveryProofUrl: string | null;
+  finalTotal: number | null;
+  deliveryPricedAt: string | null;
   notes: string | null;
   status: OrbWeaverAppointmentStatus;
   createdAt: string;
   updatedAt: string;
+}
+
+export type OrbWeaverOrderTicket = Pick<
+  OrbWeaverAppointmentRecord,
+  | "reference"
+  | "customerName"
+  | "email"
+  | "phone"
+  | "service"
+  | "helmetCount"
+  | "preferredDate"
+  | "preferredWindow"
+  | "handoffMethod"
+  | "handoffWindow"
+  | "completionWindow"
+  | "pickupArea"
+  | "pickupLatitude"
+  | "pickupLongitude"
+  | "requestedAddOns"
+  | "serviceUnitPrice"
+  | "addOnSubtotal"
+  | "estimatedSubtotal"
+  | "deliveryDistanceKm"
+  | "deliveryFee"
+  | "deliveryProofUrl"
+  | "finalTotal"
+  | "deliveryPricedAt"
+  | "notes"
+  | "status"
+  | "createdAt"
+  | "updatedAt"
+>;
+
+export interface OrbWeaverEditableAppointmentDetails {
+  customerName: string;
+  email: string;
+  phone: string;
+  service: OrbWeaverServiceId;
+  helmetCount: number;
+  preferredDate: string;
+  preferredWindow: OrbWeaverTimeWindow;
+  handoffMethod: OrbWeaverHandoffMethod;
+  pickupArea: string;
+  pickupLatitude: number | null;
+  pickupLongitude: number | null;
+  addOnIds: string[];
+  notes: string;
 }

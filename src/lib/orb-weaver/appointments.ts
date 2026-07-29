@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { unstable_noStore as noStore } from "next/cache";
 import {
   AppointmentStatus,
@@ -6,6 +7,8 @@ import {
 } from "@/generated/prisma/client";
 import { getOrbWeaverDatabase } from "@/lib/orb-weaver/database";
 import { getOrbWeaverAppointmentReference } from "@/lib/orb-weaver/reference";
+import { getOrbWeaverDeliveryQuote } from "@/lib/orb-weaver/delivery-pricing";
+import type { ValidatedOrbWeaverAppointmentDetails } from "@/lib/orb-weaver/order-details";
 import {
   type NewOrbWeaverAppointment,
   type OrbWeaverAppointmentRecord,
@@ -53,7 +56,9 @@ const serializeAppointment = (
   appointment: OrbWeaverAppointment
 ): OrbWeaverAppointmentRecord => ({
   id: appointment.id,
-  reference: getOrbWeaverAppointmentReference(appointment.id),
+  reference:
+    appointment.publicReference ??
+    getOrbWeaverAppointmentReference(appointment.id),
   customerName: appointment.customerName,
   email: appointment.email,
   phone: appointment.phone,
@@ -72,6 +77,11 @@ const serializeAppointment = (
   serviceUnitPrice: appointment.serviceUnitPrice,
   addOnSubtotal: appointment.addOnSubtotal,
   estimatedSubtotal: appointment.estimatedSubtotal,
+  deliveryDistanceKm: appointment.deliveryDistanceKm?.toNumber() ?? null,
+  deliveryFee: appointment.deliveryFee,
+  deliveryProofUrl: appointment.deliveryProofUrl,
+  finalTotal: appointment.finalTotal,
+  deliveryPricedAt: appointment.deliveryPricedAt?.toISOString() ?? null,
   notes: appointment.notes,
   status: appointment.status as OrbWeaverAppointmentStatus,
   createdAt: appointment.createdAt.toISOString(),
@@ -83,6 +93,8 @@ export const createOrbWeaverAppointment = async (
 ) => {
   const database = getOrbWeaverDatabase();
   const { requestedAddOns, ...appointmentData } = input;
+  const id = randomUUID();
+  const publicReference = getOrbWeaverAppointmentReference(id);
   const requestedAddOnsJson: Prisma.InputJsonArray = requestedAddOns.map(
     ({ id, name, unitPrice, quantity, subtotal }) => ({
       id,
@@ -94,6 +106,8 @@ export const createOrbWeaverAppointment = async (
   );
   const appointment = await database.orbWeaverAppointment.create({
     data: {
+      id,
+      publicReference,
       ...appointmentData,
       requestedAddOns: requestedAddOnsJson,
       status: AppointmentStatus.PENDING,
@@ -124,6 +138,164 @@ export const updateOrbWeaverAppointmentStatus = async (
     where: { id },
     data: { status: status as AppointmentStatus },
   });
+
+  return serializeAppointment(appointment);
+};
+
+export const updateOrbWeaverAppointment = async (
+  id: string,
+  input: {
+    status?: OrbWeaverAppointmentStatus;
+    details?: ValidatedOrbWeaverAppointmentDetails;
+    deliveryPricing?: {
+      distanceKm: number;
+      proofUrl: string;
+    };
+    requirePending?: boolean;
+  }
+) => {
+  const database = getOrbWeaverDatabase();
+  const current = await database.orbWeaverAppointment.findUniqueOrThrow({
+    where: { id },
+  });
+  if (input.requirePending && current.status !== AppointmentStatus.PENDING) {
+    throw new Error("ORDER_NOT_PENDING");
+  }
+
+  const pricingDistance =
+    input.deliveryPricing?.distanceKm ??
+    current.deliveryDistanceKm?.toNumber() ??
+    null;
+  const pricingHandoffMethod =
+    input.details?.handoffMethod ??
+    (current.handoffMethod as OrbWeaverAppointmentRecord["handoffMethod"]);
+  const pricingHelmetCount =
+    input.details?.helmetCount ?? current.helmetCount;
+  const quote = pricingDistance
+    ? getOrbWeaverDeliveryQuote({
+        distanceKm: pricingDistance,
+        handoffMethod: pricingHandoffMethod,
+        helmetCount: pricingHelmetCount,
+      })
+    : null;
+
+  if (input.deliveryPricing && !quote) {
+    throw new Error("INVALID_DELIVERY_DISTANCE");
+  }
+
+  const detailsJson: Prisma.InputJsonArray | undefined =
+    input.details?.requestedAddOns.map(
+      ({ id: addOnId, name, unitPrice, quantity, subtotal }) => ({
+        id: addOnId,
+        name,
+        unitPrice,
+        quantity,
+        subtotal,
+      })
+    );
+  const baseSubtotal =
+    input.details?.estimatedSubtotal ?? current.estimatedSubtotal;
+  const appointment = await database.orbWeaverAppointment.update({
+    where: {
+      id,
+      ...(input.requirePending ? { status: AppointmentStatus.PENDING } : {}),
+    },
+    data: {
+      ...(input.status
+        ? { status: input.status as AppointmentStatus }
+        : {}),
+      ...(quote && input.deliveryPricing
+        ? {
+            deliveryDistanceKm: quote.distanceKm,
+            deliveryFee: quote.fee,
+            deliveryProofUrl: input.deliveryPricing.proofUrl,
+            finalTotal:
+              baseSubtotal === null
+                ? null
+                : baseSubtotal + quote.fee,
+            deliveryPricedAt: new Date(),
+          }
+        : {}),
+      ...(input.details
+        ? {
+            customerName: input.details.customerName,
+            email: input.details.email,
+            phone: input.details.phone,
+            service: input.details.service,
+            helmetCount: input.details.helmetCount,
+            preferredDate: input.details.preferredDate,
+            preferredWindow: input.details.preferredWindow,
+            handoffMethod: input.details.handoffMethod,
+            handoffWindow: input.details.handoffWindow,
+            completionWindow: input.details.completionWindow,
+            pickupArea: input.details.pickupArea,
+            pickupLatitude: input.details.pickupLatitude,
+            pickupLongitude: input.details.pickupLongitude,
+            requestedAddOns: detailsJson,
+            serviceUnitPrice: input.details.serviceUnitPrice,
+            addOnSubtotal: input.details.addOnSubtotal,
+            estimatedSubtotal: input.details.estimatedSubtotal,
+            notes: input.details.notes,
+            ...(quote
+              ? {
+                  deliveryFee: quote.fee,
+                  finalTotal: input.details.estimatedSubtotal + quote.fee,
+                  deliveryPricedAt: new Date(),
+                }
+              : {}),
+          }
+        : {}),
+    },
+  });
+
+  return serializeAppointment(appointment);
+};
+
+export const cancelPendingOrbWeaverAppointment = async (id: string) => {
+  const database = getOrbWeaverDatabase();
+  const appointment = await database.orbWeaverAppointment.update({
+    where: { id, status: AppointmentStatus.PENDING },
+    data: { status: AppointmentStatus.CANCELLED },
+  });
+
+  return serializeAppointment(appointment);
+};
+
+export const findOrbWeaverAppointmentForCustomer = async (
+  reference: string,
+  phone: string
+) => {
+  noStore();
+
+  const database = getOrbWeaverDatabase();
+  const normalizedReference = reference.trim().toUpperCase();
+  const normalizedPhone = phone.replace(/\D/g, "");
+  let appointment = await database.orbWeaverAppointment.findUnique({
+    where: { publicReference: normalizedReference },
+  });
+
+  // Appointments created before publicReference was added still use the
+  // deterministic reference derived from their UUID.
+  if (!appointment) {
+    const legacyAppointments = await database.orbWeaverAppointment.findMany({
+      where: { publicReference: null },
+      orderBy: { createdAt: "desc" },
+      take: 500,
+    });
+    appointment =
+      legacyAppointments.find(
+        (candidate) =>
+          getOrbWeaverAppointmentReference(candidate.id) ===
+          normalizedReference
+      ) ?? null;
+  }
+
+  if (
+    !appointment ||
+    appointment.phone.replace(/\D/g, "") !== normalizedPhone
+  ) {
+    return null;
+  }
 
   return serializeAppointment(appointment);
 };

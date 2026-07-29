@@ -1,5 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { updateOrbWeaverAppointmentStatus } from "@/lib/orb-weaver/appointments";
+import { updateOrbWeaverAppointment } from "@/lib/orb-weaver/appointments";
+import {
+  isOrbWeaverGoogleMapsUrl,
+  ORB_WEAVER_MAX_DELIVERY_DISTANCE_KM,
+} from "@/lib/orb-weaver/delivery-pricing";
+import { validateOrbWeaverAppointmentDetails } from "@/lib/orb-weaver/order-details";
 import {
   isOrbWeaverAuthenticated,
   isSameOriginRequest,
@@ -43,22 +48,81 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       );
     }
 
-    const body = parsedBody as { status?: unknown };
+    const body = parsedBody as {
+      status?: unknown;
+      deliveryDistanceKm?: unknown;
+      deliveryProofUrl?: unknown;
+      details?: unknown;
+    };
+    const hasStatus = body.status !== undefined;
     const status = typeof body.status === "string" ? body.status : "";
+    const hasDeliveryPricing =
+      body.deliveryDistanceKm !== undefined ||
+      body.deliveryProofUrl !== undefined;
+    const hasDetails = body.details !== undefined;
+    const deliveryDistanceKm = Number(body.deliveryDistanceKm);
+    const deliveryProofUrl =
+      typeof body.deliveryProofUrl === "string"
+        ? body.deliveryProofUrl.trim()
+        : "";
 
     if (
-      !ORB_WEAVER_STATUSES.includes(status as OrbWeaverAppointmentStatus)
+      (!hasStatus && !hasDeliveryPricing && !hasDetails) ||
+      (hasStatus &&
+        !ORB_WEAVER_STATUSES.includes(status as OrbWeaverAppointmentStatus))
     ) {
       return NextResponse.json(
-        { message: "Choose a valid appointment status." },
+        { message: "Choose a valid update." },
         { status: 400 }
       );
     }
 
-    const appointment = await updateOrbWeaverAppointmentStatus(
-      id,
-      status as OrbWeaverAppointmentStatus
-    );
+    const validatedDetails = hasDetails
+      ? validateOrbWeaverAppointmentDetails(body.details, {
+          allowPastDate: true,
+        })
+      : null;
+
+    if (validatedDetails && !validatedDetails.ok) {
+      return NextResponse.json(
+        { message: validatedDetails.message },
+        { status: 400 }
+      );
+    }
+
+    if (
+      hasDeliveryPricing &&
+      (!Number.isFinite(deliveryDistanceKm) ||
+        deliveryDistanceKm <= 0 ||
+        deliveryDistanceKm > ORB_WEAVER_MAX_DELIVERY_DISTANCE_KM ||
+        deliveryProofUrl.length > 600 ||
+        !isOrbWeaverGoogleMapsUrl(deliveryProofUrl))
+    ) {
+      return NextResponse.json(
+        {
+          message:
+            `Enter a distance from 0.01 to ${ORB_WEAVER_MAX_DELIVERY_DISTANCE_KM} km and a valid Google Maps route link.`,
+        },
+        { status: 400 }
+      );
+    }
+
+    const appointment = await updateOrbWeaverAppointment(id, {
+      ...(hasStatus
+        ? { status: status as OrbWeaverAppointmentStatus }
+        : {}),
+      ...(hasDeliveryPricing
+        ? {
+            deliveryPricing: {
+              distanceKm: deliveryDistanceKm,
+              proofUrl: deliveryProofUrl,
+            },
+          }
+        : {}),
+      ...(validatedDetails?.ok
+        ? { details: validatedDetails.details }
+        : {}),
+    });
     const response = NextResponse.json({ appointment });
     response.headers.set("Cache-Control", "private, no-store");
 
@@ -68,6 +132,13 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return NextResponse.json(
         { message: "Appointment not found." },
         { status: 404 }
+      );
+    }
+
+    if ((error as Error).message === "INVALID_DELIVERY_DISTANCE") {
+      return NextResponse.json(
+        { message: "That distance could not be priced." },
+        { status: 400 }
       );
     }
 

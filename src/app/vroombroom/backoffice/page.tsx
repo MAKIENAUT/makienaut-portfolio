@@ -53,7 +53,7 @@ export default async function OrbWeaverBackofficePage() {
                 VroomBroom
               </p>
               <h1 className="mt-1 text-xl font-semibold text-white">
-                Appointment dashboard
+                Order backoffice
               </h1>
             </div>
           </div>
@@ -75,7 +75,7 @@ export default async function OrbWeaverBackofficePage() {
         <div className="mb-8">
           <p className="text-sm text-stone-500">Back-office overview</p>
           <h2 className="mt-2 text-3xl font-semibold tracking-tight text-white">
-            Keep every clean on track.
+            Keep every ticket on track.
           </h2>
         </div>
 

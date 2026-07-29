@@ -14,7 +14,13 @@ import {
   FaCheck,
   FaCheckCircle,
   FaChevronDown,
+  FaEdit,
+  FaEnvelope,
+  FaExternalLinkAlt,
+  FaMapMarkerAlt,
   FaMotorcycle,
+  FaPhoneAlt,
+  FaReceipt,
   FaStore,
 } from "react-icons/fa";
 import {
@@ -26,12 +32,16 @@ import {
 } from "@/types/orb-weaver";
 import { BookingSchedulePicker } from "@/components/orb-weaver/BookingSchedulePicker";
 import { PendingNavigationLink } from "@/components/orb-weaver/PendingNavigationLink";
-import type { OrbWeaverGeoPoint } from "@/lib/orb-weaver/location";
+import {
+  getOrbWeaverPickupMapUrl,
+  ORB_WEAVER_MEETUP,
+  type OrbWeaverGeoPoint,
+} from "@/lib/orb-weaver/location";
 
 type FormState =
   | { status: "idle"; message?: undefined; reference?: undefined }
   | { status: "submitting"; message?: undefined; reference?: undefined }
-  | { status: "success"; message: string; reference?: string }
+  | { status: "success"; message: string; reference: string }
   | { status: "error"; message: string; reference?: undefined };
 
 interface AppointmentFormProps {
@@ -112,6 +122,13 @@ const formatReviewDate = (value?: string) => {
     year: "numeric",
   }).format(new Date(`${value}T00:00:00+08:00`));
 };
+
+const formatPeso = (amount: number) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(amount);
 
 export function AppointmentForm({
   initialServiceId,
@@ -378,6 +395,21 @@ export function AppointmentForm({
         );
       }
 
+      if (!result.reference || !/^[A-F0-9]{8}$/.test(result.reference)) {
+        throw new Error(
+          "The booking was not given a reference number. Please try again."
+        );
+      }
+
+      try {
+        window.sessionStorage.setItem(
+          `vroombroom-order-phone:${result.reference}`,
+          String(formData.get("phone") ?? "")
+        );
+      } catch {
+        // Tracking still works when session storage is unavailable.
+      }
+
       form.reset();
       setFormState({
         status: "success",
@@ -405,29 +437,209 @@ export function AppointmentForm({
         ref={feedbackRef}
         tabIndex={-1}
         role="status"
-        className="rounded-[1.75rem] border border-emerald-300/20 bg-[#10110f]/95 p-6 text-center shadow-[0_24px_80px_rgba(0,0,0,0.4)] outline-none sm:p-8"
+        className="outline-none"
       >
-        <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-300 text-2xl text-black">
-          <FaCheckCircle aria-hidden="true" />
-        </span>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
-          Request received
-        </p>
-        <h2 className="mt-2 text-2xl font-semibold text-white">
-          Your helmet reset is in the queue.
-        </h2>
-        <p className="mx-auto mt-3 max-w-md text-sm leading-6 text-stone-400">
+        <div className="mb-5 text-center">
+          <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-300 text-2xl text-black">
+            <FaCheckCircle aria-hidden="true" />
+          </span>
+          <p className="mt-4 text-xs font-semibold uppercase tracking-[0.22em] text-emerald-300">
+            Request received
+          </p>
+          <h2 className="mt-2 text-2xl font-semibold text-white">
+            Your booking is in the queue.
+          </h2>
+        </div>
+
+        <div className="mx-auto max-w-xl drop-shadow-[0_28px_42px_rgba(0,0,0,0.42)]">
+          <div
+            aria-hidden="true"
+            className="h-3"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, transparent 50%, #f4eddd 50%), linear-gradient(45deg, #f4eddd 50%, transparent 50%)",
+              backgroundPosition: "0 0, 8px 0",
+              backgroundSize: "16px 16px",
+            }}
+          />
+          <article
+            className="relative bg-[#f4eddd] text-left font-mono text-[#2d2922]"
+            style={{
+              backgroundImage:
+                "radial-gradient(rgba(91,76,48,0.08) 0.7px, transparent 0.7px)",
+              backgroundSize: "5px 5px",
+            }}
+          >
+            <header className="relative px-5 pb-5 pt-6 text-center sm:px-8 sm:pt-8">
+              <div className="flex flex-col items-center text-center">
+                <div>
+                  <p className="font-sans text-lg font-black uppercase tracking-[0.16em] text-[#201d18]">
+                    VroomBroom
+                  </p>
+                  <p className="mt-0.5 text-[0.6rem] uppercase tracking-[0.2em] text-[#746b5d]">
+                    Helmet care receipt
+                  </p>
+                </div>
+                <span className="mt-3 inline-flex -rotate-2 items-center justify-center border-2 border-[#8b3a2c] px-4 py-1.5 text-center font-sans text-[0.62rem] font-black uppercase leading-4 tracking-[0.16em] text-[#8b3a2c]">
+                  Pending
+                </span>
+              </div>
+
+              <div className="mt-6 border-y-2 border-dashed border-[#a99f8d] py-5">
+                <p className="text-[0.62rem] font-bold uppercase tracking-[0.2em] text-[#746b5d]">
+                  Booking reference
+                </p>
+                <p className="mt-2 text-3xl font-black tracking-[0.18em] text-[#171511] sm:text-4xl">
+                  {formState.reference}
+                </p>
+                <div
+                  aria-hidden="true"
+                  className="mx-auto mt-3 h-7 w-44 opacity-75"
+                  style={{
+                    backgroundImage:
+                      "repeating-linear-gradient(90deg,#2d2922 0 2px,transparent 2px 4px,#2d2922 4px 5px,transparent 5px 8px)",
+                  }}
+                />
+                <p className="mt-2 font-sans text-xs font-medium text-[#5f574b]">
+                  {reviewValues.customerName || "Customer"}
+                </p>
+              </div>
+            </header>
+
+            <section className="px-5 pb-5 sm:px-8">
+              <div className="grid gap-4 text-[0.7rem] sm:grid-cols-2">
+                <div>
+                  <p className="font-bold uppercase tracking-[0.12em] text-[#7a7163]">
+                    Handoff date
+                  </p>
+                  <p className="mt-1.5 font-bold text-[#2d2922]">
+                    {formatReviewDate(reviewValues.preferredDate)}
+                  </p>
+                  <p className="mt-1 text-[#6f675b]">
+                    {selectedTimeWindow?.shortName ?? "Time to be confirmed"}
+                  </p>
+                </div>
+                <div className="sm:text-right">
+                  <p className="font-bold uppercase tracking-[0.12em] text-[#7a7163]">
+                    Handoff
+                  </p>
+                  <p className="mt-1.5 font-bold text-[#2d2922]">
+                    {handoff === "pickup_return"
+                      ? "Pickup + return"
+                      : "Customer drop-off + return"}
+                  </p>
+                  <p className="mt-1 text-[#6f675b]">
+                    {handoff === "pickup_return"
+                      ? reviewValues.pickupArea || "Pinned pickup location"
+                      : `${ORB_WEAVER_MEETUP.name} · ${ORB_WEAVER_MEETUP.label}`}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <section className="border-t-2 border-dashed border-[#a99f8d] px-5 py-5 sm:px-8">
+              <div className="flex items-center justify-between text-[0.64rem] font-bold uppercase tracking-[0.14em] text-[#746b5d]">
+                <span>Description</span>
+                <span>Amount</span>
+              </div>
+              <div className="mt-4 space-y-3 text-xs">
+                <div className="flex items-start justify-between gap-4">
+                  <div>
+                    <p className="font-bold text-[#2d2922]">
+                      {selectedServiceDetails?.name ?? "Helmet cleaning"}
+                    </p>
+                    <p className="mt-0.5 text-[0.66rem] text-[#746b5d]">
+                      {helmetCount}{" "}
+                      {helmetCount === 1 ? "helmet" : "helmets"}
+                      {selectedServiceDetails &&
+                        ` @ ${formatPeso(selectedServiceDetails.price)}`}
+                    </p>
+                  </div>
+                  <p className="shrink-0 font-bold text-[#2d2922]">
+                    {selectedServiceDetails
+                      ? formatPeso(selectedServiceDetails.price * helmetCount)
+                      : "—"}
+                  </p>
+                </div>
+
+                {ORB_WEAVER_ADD_ONS.filter((addOn) =>
+                  selectedAddOns.includes(addOn.id)
+                ).map((addOn) => {
+                  const quantity = addOn.perBooking ? 1 : helmetCount;
+
+                  return (
+                    <div
+                      key={addOn.id}
+                      className="flex items-start justify-between gap-4"
+                    >
+                      <span className="text-[#5f574b]">
+                        {addOn.name}
+                        {quantity > 1 && ` × ${quantity}`}
+                      </span>
+                      <span className="shrink-0 text-[#3d382f]">
+                        {formatPeso(addOn.price * quantity)}
+                      </span>
+                    </div>
+                  );
+                })}
+
+                <div className="flex items-center justify-between gap-4 border-t border-dotted border-[#aaa08e] pt-3">
+                  <span className="text-[#746b5d]">Delivery</span>
+                  <span className="font-bold text-[#5f574b]">
+                    Pending distance check
+                  </span>
+                </div>
+                <div className="flex items-end justify-between gap-4 border-t-2 border-[#4d463b] pt-4">
+                  <div>
+                    <p className="font-black uppercase tracking-[0.1em] text-[#2d2922]">
+                      Current subtotal
+                    </p>
+                    <p className="mt-1 text-[0.62rem] text-[#746b5d]">
+                      Final total updates on your ticket
+                    </p>
+                  </div>
+                  <p className="shrink-0 text-2xl font-black text-[#171511]">
+                    {formatPeso(estimatedSubtotal)}
+                  </p>
+                </div>
+              </div>
+            </section>
+
+            <footer className="border-t-2 border-dashed border-[#a99f8d] px-5 py-5 text-center sm:px-8">
+              <p className="font-sans text-xs font-semibold leading-5 text-[#514b41]">
+                Keep this receipt. Use the reference and your mobile number to
+                check, edit, or cancel while the order is pending.
+              </p>
+              <p className="mt-3 text-[0.58rem] uppercase tracking-[0.16em] text-[#857b6b]">
+                Thank you for riding fresh
+              </p>
+            </footer>
+          </article>
+          <div
+            aria-hidden="true"
+            className="h-3 rotate-180"
+            style={{
+              backgroundImage:
+                "linear-gradient(135deg, transparent 50%, #f4eddd 50%), linear-gradient(45deg, #f4eddd 50%, transparent 50%)",
+              backgroundPosition: "0 0, 8px 0",
+              backgroundSize: "16px 16px",
+            }}
+          />
+        </div>
+
+        <p className="mx-auto mt-5 max-w-md text-center text-sm leading-6 text-stone-400">
           {formState.message}
         </p>
-        {formState.reference && (
-          <div className="mx-auto mt-5 max-w-xs rounded-xl border border-white/10 bg-black/25 px-4 py-3">
-            <p className="text-xs text-stone-500">Booking reference</p>
-            <p className="mt-1 font-semibold tracking-wide text-amber-200">
-              {formState.reference}
-            </p>
-          </div>
-        )}
-        <div className="mt-7 flex flex-col gap-3 sm:flex-row sm:justify-center">
+
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:justify-center">
+          <PendingNavigationLink
+            href={`/vroombroom/orders?reference=${formState.reference}`}
+            pendingLabel="Opening order…"
+            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300"
+          >
+            <FaReceipt aria-hidden="true" />
+            Check my order
+          </PendingNavigationLink>
           <PendingNavigationLink
             href="/vroombroom"
             pendingLabel="Returning…"
@@ -438,7 +650,7 @@ export function AppointmentForm({
           <button
             type="button"
             onClick={startOver}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl bg-amber-400 px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-amber-300"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-amber-300/25 bg-amber-300/[0.07] px-5 py-2.5 text-sm font-semibold text-amber-200 transition hover:bg-amber-300/15"
           >
             Make another request
           </button>
@@ -519,20 +731,6 @@ export function AppointmentForm({
         <p className="mt-1.5 text-sm leading-6 text-stone-400">
           {steps[currentStep].description}
         </p>
-      </div>
-
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute left-[-10000px] top-auto h-px w-px overflow-hidden"
-      >
-        <label htmlFor="orb-website">Website</label>
-        <input
-          id="orb-website"
-          name="website"
-          type="text"
-          tabIndex={-1}
-          autoComplete="off"
-        />
       </div>
 
       <div className="px-5 pb-6 pt-4 sm:px-6">
@@ -792,7 +990,7 @@ export function AppointmentForm({
                       I&apos;ll drop it off
                     </span>
                     <span className="mt-0.5 block text-[0.7rem] leading-4 text-stone-500">
-                      Free return delivery within 10 km
+                      Belton Drive · in front of SM Hypermarket Novaliches
                     </span>
                   </span>
                 </span>
@@ -884,52 +1082,197 @@ export function AppointmentForm({
         </div>
 
         <div data-form-step="3" hidden={currentStep !== 3}>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Cleaning
-              </p>
-              <p className="mt-1.5 text-sm font-semibold text-white">
-                {selectedServiceDetails?.name ?? "Not selected"}
-                {helmetCount > 1 ? ` · ${helmetCount} helmets` : ""}
-              </p>
-              <p className="mt-1 text-xs text-stone-500">
-                {selectedAddOns.length
-                  ? `${selectedAddOns.length} add-on${
-                      selectedAddOns.length === 1 ? "" : "s"
-                    } selected`
-                  : "No paid add-ons"}
-              </p>
-            </div>
+          <div className="space-y-3">
+            <section className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                    Contact
+                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-white">
+                    {reviewValues.customerName || "Not provided"}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(0)}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-300/10"
+                >
+                  <FaEdit aria-hidden="true" />
+                  Edit
+                </button>
+              </div>
+              <div className="mt-3 grid gap-2 text-xs text-stone-400 sm:grid-cols-2">
+                <p className="flex items-center gap-2">
+                  <FaPhoneAlt
+                    aria-hidden="true"
+                    className="shrink-0 text-amber-300"
+                  />
+                  {reviewValues.phone || "No mobile number"}
+                </p>
+                <p className="flex min-w-0 items-center gap-2">
+                  <FaEnvelope
+                    aria-hidden="true"
+                    className="shrink-0 text-amber-300"
+                  />
+                  <span className="truncate">
+                    {reviewValues.email || "No email provided"}
+                  </span>
+                </p>
+              </div>
+            </section>
 
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Schedule
-              </p>
-              <p className="mt-1.5 text-sm font-semibold text-white">
-                {formatReviewDate(reviewValues.preferredDate)}
-              </p>
-              <p className="mt-1 text-xs text-stone-500">
-                {selectedTimeWindow?.name ?? "No time selected"}
-              </p>
-            </div>
+            <section className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                    Cleaning
+                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-white">
+                    {selectedServiceDetails?.name ?? "Not selected"}
+                    {` · ${helmetCount} ${
+                      helmetCount === 1 ? "helmet" : "helmets"
+                    }`}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(1)}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-300/10"
+                >
+                  <FaEdit aria-hidden="true" />
+                  Edit
+                </button>
+              </div>
 
-            <div className="rounded-xl border border-white/10 bg-black/20 p-3.5 sm:col-span-2">
-              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
-                Handoff
-              </p>
-              <p className="mt-1.5 text-sm font-semibold text-white">
-                {handoff === "pickup_return"
-                  ? "Pickup + return"
-                  : "Customer drop-off + return"}
-              </p>
-              <p className="mt-1 text-xs text-stone-500">
-                {handoff === "pickup_return"
-                  ? reviewValues.pickupArea ||
-                    "Pinned location saved with this request"
-                  : "Meetup details will be confirmed with you"}
-              </p>
-            </div>
+              <div className="mt-3 space-y-2 border-t border-white/[0.07] pt-3 text-xs">
+                <div className="flex items-start justify-between gap-4">
+                  <span className="text-stone-400">
+                    {selectedServiceDetails?.name ?? "Cleaning service"}
+                    {selectedServiceDetails &&
+                      ` · ${helmetCount} × ${formatPeso(
+                        selectedServiceDetails.price
+                      )}`}
+                  </span>
+                  <span className="shrink-0 text-stone-200">
+                    {selectedServiceDetails
+                      ? formatPeso(selectedServiceDetails.price * helmetCount)
+                      : "—"}
+                  </span>
+                </div>
+                {ORB_WEAVER_ADD_ONS.filter(
+                  (addOn) =>
+                    selectedAddOns.includes(addOn.id) &&
+                    !isAddOnIncluded(addOn, selectedService)
+                ).map((addOn) => {
+                  const quantity = addOn.perBooking ? 1 : helmetCount;
+
+                  return (
+                    <div
+                      key={addOn.id}
+                      className="flex items-start justify-between gap-4"
+                    >
+                      <span className="text-stone-400">
+                        {addOn.name}
+                        {quantity > 1 &&
+                          ` · ${quantity} × ${formatPeso(addOn.price)}`}
+                      </span>
+                      <span className="shrink-0 text-stone-200">
+                        {formatPeso(addOn.price * quantity)}
+                      </span>
+                    </div>
+                  );
+                })}
+                {selectedAddOns.length === 0 && (
+                  <p className="text-stone-600">No paid add-ons selected.</p>
+                )}
+              </div>
+            </section>
+
+            <section className="rounded-xl border border-white/10 bg-black/20 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-stone-500">
+                    Schedule + handoff
+                  </p>
+                  <p className="mt-1.5 text-sm font-semibold text-white">
+                    {formatReviewDate(reviewValues.preferredDate)}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentStep(2)}
+                  className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2 text-xs font-semibold text-amber-200 transition hover:bg-amber-300/10"
+                >
+                  <FaEdit aria-hidden="true" />
+                  Edit
+                </button>
+              </div>
+
+              <dl className="mt-3 space-y-2 border-t border-white/[0.07] pt-3 text-xs">
+                <div className="flex justify-between gap-4">
+                  <dt className="text-stone-500">
+                    {handoff === "pickup_return" ? "Pickup" : "Drop-off"}
+                  </dt>
+                  <dd className="text-right text-stone-300">
+                    {selectedTimeWindow?.shortName ?? "No time selected"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-stone-500">
+                    {handoff === "pickup_return" ? "Return" : "Claim"}
+                  </dt>
+                  <dd className="text-right text-stone-300">
+                    {selectedTimeWindow?.completionTime ?? "Not available"}
+                  </dd>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <dt className="text-stone-500">Method</dt>
+                  <dd className="text-right text-stone-300">
+                    {handoff === "pickup_return"
+                      ? "Pickup + return"
+                      : "Customer drop-off + return"}
+                  </dd>
+                </div>
+              </dl>
+
+              {handoff === "pickup_return" && (
+                <div className="mt-3 flex items-start gap-2 border-t border-white/[0.07] pt-3 text-xs leading-5 text-stone-400">
+                  <FaMapMarkerAlt
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-amber-300"
+                  />
+                  <div>
+                    <p>
+                      {reviewValues.pickupArea ||
+                        "Pinned pickup location saved with this request"}
+                    </p>
+                    {pickupLocation && (
+                      <a
+                        href={getOrbWeaverPickupMapUrl(pickupLocation)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-1.5 inline-flex items-center gap-1.5 font-semibold text-amber-200 hover:text-amber-300"
+                      >
+                        <FaExternalLinkAlt aria-hidden="true" />
+                        Check your pickup pin
+                      </a>
+                    )}
+                  </div>
+                </div>
+              )}
+              {handoff === "drop_off" && (
+                <div className="mt-3 flex items-start gap-2 border-t border-white/[0.07] pt-3 text-xs leading-5 text-stone-400">
+                  <FaMapMarkerAlt
+                    aria-hidden="true"
+                    className="mt-0.5 shrink-0 text-amber-300"
+                  />
+                  <p>
+                    {ORB_WEAVER_MEETUP.name} · {ORB_WEAVER_MEETUP.label}
+                  </p>
+                </div>
+              )}
+            </section>
           </div>
 
           <div className="mt-4">
@@ -946,20 +1289,52 @@ export function AppointmentForm({
             />
           </div>
 
-          <div className="mt-4 flex items-center justify-between gap-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.17em] text-amber-300">
-                Estimated subtotal
-              </p>
-              <p className="mt-1 text-[0.7rem] leading-4 text-stone-500">
-                Transport is confirmed separately.
+          <div className="mt-4 rounded-xl border border-amber-300/20 bg-amber-300/[0.07] p-4">
+            <div className="flex items-center gap-2 text-amber-300">
+              <FaReceipt aria-hidden="true" />
+              <p className="text-xs font-semibold uppercase tracking-[0.17em]">
+                Price review
               </p>
             </div>
-            <p className="shrink-0 text-2xl font-semibold text-white">
-              {selectedServiceDetails
-                ? `₱${estimatedSubtotal}`
-                : "Not available"}
-            </p>
+            <div className="mt-3 space-y-2 text-xs">
+              <div className="flex items-center justify-between gap-4 text-stone-400">
+                <span>Cleaning + add-ons</span>
+                <span className="font-medium text-stone-200">
+                  {selectedServiceDetails
+                    ? formatPeso(estimatedSubtotal)
+                    : "Not available"}
+                </span>
+              </div>
+              <div className="flex items-start justify-between gap-4 text-stone-400">
+                <div>
+                  <span>Delivery</span>
+                  <p className="mt-0.5 max-w-md text-[0.68rem] leading-4 text-stone-600">
+                    VroomBroom measures the one-way Google Maps route after
+                    submission: ₱30 up to 5 km or ₱50 over 5–10 km for one
+                    helmet pickup + return; free for customer drop-off or 2+
+                    helmets within 10 km.
+                  </p>
+                </div>
+                <span className="shrink-0 font-medium text-stone-300">
+                  Pending
+                </span>
+              </div>
+            </div>
+            <div className="mt-3 flex items-end justify-between gap-4 border-t border-amber-300/20 pt-3">
+              <div>
+                <p className="text-xs font-semibold text-amber-200">
+                  Current subtotal
+                </p>
+                <p className="mt-0.5 text-[0.68rem] text-stone-500">
+                  Your ticket updates when distance is confirmed.
+                </p>
+              </div>
+              <p className="shrink-0 text-2xl font-semibold text-white">
+                {selectedServiceDetails
+                  ? formatPeso(estimatedSubtotal)
+                  : "Not available"}
+              </p>
+            </div>
           </div>
 
           <label className="mt-4 flex cursor-pointer items-start gap-3 text-xs leading-5 text-stone-400">
@@ -970,9 +1345,10 @@ export function AppointmentForm({
               className="mt-0.5 h-4 w-4 shrink-0 rounded border-white/20 bg-black accent-amber-400"
             />
             <span>
-              I agree to be contacted about this request. No payment is
-              collected here, and a pickup pin is only used to coordinate this
-              booking.
+              I confirm these details are correct and agree to be contacted
+              about this request. No payment is collected here. A pickup pin
+              and shared Google Maps route are used only to coordinate and
+              price this booking.
             </span>
           </label>
         </div>

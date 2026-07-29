@@ -63,14 +63,6 @@ export async function POST(request: NextRequest) {
 
     const body = parsedBody as Record<string, unknown>;
 
-    // Honeypot field: return a normal-looking response without writing data.
-    if (textValue(body.website)) {
-      return NextResponse.json(
-        { message: "Your appointment request has been received." },
-        { status: 201 }
-      );
-    }
-
     const customerName = textValue(body.customerName);
     const email = textValue(body.email).toLowerCase();
     const phone = textValue(body.phone);

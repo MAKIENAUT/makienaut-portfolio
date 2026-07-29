@@ -8,6 +8,9 @@ const globalForPrisma = globalThis as unknown as {
 let orbWeaverPrisma = globalForPrisma.orbWeaverPrisma;
 
 const resolveDatabaseUrl = () =>
+  (process.env.NODE_ENV !== "production"
+    ? process.env.ORBW_DEV_DATABASE_URL
+    : undefined) ||
   process.env.OW_MAIN_DB_DATABASE_URL ||
   process.env.DATABASE_URL ||
   process.env.OW_MAIN_DB_POSTGRES_URL ||

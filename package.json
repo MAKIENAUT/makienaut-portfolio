@@ -15,6 +15,9 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
+    "db:status": "prisma migrate status",
+    "env:dev:pull": "npx --yes vercel env pull .env.local --environment=development --yes",
+    "dev:setup": "npm run env:dev:pull && npm run db:deploy && npm run db:generate",
     "db:studio": "prisma studio",
     "auth:hash": "node scripts/hash-orb-password.mjs"
   },

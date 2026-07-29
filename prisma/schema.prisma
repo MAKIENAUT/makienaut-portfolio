@@ -17,29 +17,35 @@ enum AppointmentStatus {
 }
 
 model OrbWeaverAppointment {
-  id                String            @id @default(uuid()) @db.Uuid
-  customerName      String            @db.VarChar(100)
-  email             String            @db.VarChar(160)
-  phone             String            @db.VarChar(40)
-  service           String            @db.VarChar(50)
-  helmetCount       Int               @default(1)
-  preferredDate     DateTime          @db.Date
-  preferredWindow   String            @db.VarChar(30)
-  handoffMethod     String?           @db.VarChar(30)
-  handoffWindow     String?           @db.VarChar(80)
-  completionWindow  String?           @db.VarChar(80)
-  pickupArea        String?           @db.VarChar(180)
-  pickupLatitude    Decimal?          @db.Decimal(9, 6)
-  pickupLongitude   Decimal?          @db.Decimal(9, 6)
-  requestedAddOns   Json?             @db.JsonB
-  serviceUnitPrice  Int?
-  addOnSubtotal     Int?
-  estimatedSubtotal Int?
-  notes             String?           @db.VarChar(1600)
-  status            AppointmentStatus @default(PENDING)
-  sourceFingerprint String?           @db.VarChar(64)
-  createdAt         DateTime          @default(now()) @db.Timestamptz(3)
-  updatedAt         DateTime          @updatedAt @db.Timestamptz(3)
+  id                 String            @id @default(uuid()) @db.Uuid
+  publicReference    String?           @unique @db.VarChar(16)
+  customerName       String            @db.VarChar(100)
+  email              String            @db.VarChar(160)
+  phone              String            @db.VarChar(40)
+  service            String            @db.VarChar(50)
+  helmetCount        Int               @default(1)
+  preferredDate      DateTime          @db.Date
+  preferredWindow    String            @db.VarChar(30)
+  handoffMethod      String?           @db.VarChar(30)
+  handoffWindow      String?           @db.VarChar(80)
+  completionWindow   String?           @db.VarChar(80)
+  pickupArea         String?           @db.VarChar(180)
+  pickupLatitude     Decimal?          @db.Decimal(9, 6)
+  pickupLongitude    Decimal?          @db.Decimal(9, 6)
+  requestedAddOns    Json?             @db.JsonB
+  serviceUnitPrice   Int?
+  addOnSubtotal      Int?
+  estimatedSubtotal  Int?
+  deliveryDistanceKm Decimal?          @db.Decimal(5, 2)
+  deliveryFee        Int?
+  deliveryProofUrl   String?           @db.VarChar(600)
+  finalTotal         Int?
+  deliveryPricedAt   DateTime?         @db.Timestamptz(3)
+  notes              String?           @db.VarChar(1600)
+  status             AppointmentStatus @default(PENDING)
+  sourceFingerprint  String?           @db.VarChar(64)
+  createdAt          DateTime          @default(now()) @db.Timestamptz(3)
+  updatedAt          DateTime          @updatedAt @db.Timestamptz(3)
 
   @@index([status, preferredDate])
   @@index([sourceFingerprint, createdAt])

@@ -4,12 +4,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   FaCalendarCheck,
   FaCheckCircle,
+  FaChevronLeft,
+  FaChevronRight,
   FaClock,
-  FaEnvelope,
-  FaExternalLinkAlt,
-  FaMapMarkerAlt,
+  FaEye,
   FaMotorcycle,
-  FaPhoneAlt,
+  FaReceipt,
   FaSearch,
   FaSyncAlt,
 } from "react-icons/fa";
@@ -21,15 +21,15 @@ import {
   ORB_WEAVER_TIME_WINDOWS,
   type OrbWeaverAppointmentRecord,
   type OrbWeaverAppointmentStatus,
+  type OrbWeaverEditableAppointmentDetails,
 } from "@/types/orb-weaver";
-import {
-  getOrbWeaverPickupDirectionsUrl,
-  getOrbWeaverPickupMapUrl,
-} from "@/lib/orb-weaver/location";
+import { BackofficeTicketModal } from "@/components/orb-weaver/BackofficeTicketModal";
 
 interface AppointmentsDashboardProps {
   initialAppointments: OrbWeaverAppointmentRecord[];
 }
+
+const TICKETS_PER_PAGE = 6;
 
 const statusLabels: Record<OrbWeaverAppointmentStatus, string> = {
   PENDING: "Pending",
@@ -40,13 +40,20 @@ const statusLabels: Record<OrbWeaverAppointmentStatus, string> = {
   CANCELLED: "Cancelled",
 };
 
-const statusClasses: Record<OrbWeaverAppointmentStatus, string> = {
-  PENDING: "border-amber-300/20 bg-amber-300/10 text-amber-200",
-  CONFIRMED: "border-sky-300/20 bg-sky-300/10 text-sky-200",
-  IN_PROGRESS: "border-violet-300/20 bg-violet-300/10 text-violet-200",
-  READY: "border-emerald-300/20 bg-emerald-300/10 text-emerald-200",
-  COMPLETED: "border-stone-300/20 bg-stone-300/10 text-stone-300",
-  CANCELLED: "border-red-300/20 bg-red-300/10 text-red-200",
+const statusStampClasses: Record<OrbWeaverAppointmentStatus, string> = {
+  PENDING: "border-[#9a5b24] text-[#8a4f1f]",
+  CONFIRMED: "border-[#376483] text-[#315b77]",
+  IN_PROGRESS: "border-[#694d83] text-[#5f4677]",
+  READY: "border-[#2f6b4e] text-[#2f6b4e]",
+  COMPLETED: "border-[#5e574c] text-[#514b41]",
+  CANCELLED: "border-[#9b3b31] text-[#8b342b]",
+};
+
+const paperEdgeStyle = {
+  backgroundImage:
+    "linear-gradient(135deg, transparent 50%, #f4eddd 50%), linear-gradient(45deg, #f4eddd 50%, transparent 50%)",
+  backgroundPosition: "0 0, 8px 0",
+  backgroundSize: "16px 16px",
 };
 
 const formatDate = (date: string) =>
@@ -86,6 +93,11 @@ export function AppointmentsDashboard({
   const [updatingId, setUpdatingId] = useState<string>();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [error, setError] = useState("");
+  const [selectedAppointmentId, setSelectedAppointmentId] = useState<
+    string | null
+  >(null);
+  const [page, setPage] = useState(1);
+  const closeTicket = useCallback(() => setSelectedAppointmentId(null), []);
 
   const refreshAppointments = useCallback(async (silent = false) => {
     if (!silent) {
@@ -162,6 +174,33 @@ export function AppointmentsDashboard({
       return matchesStatus && matchesQuery;
     });
   }, [appointments, filter, query]);
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredAppointments.length / TICKETS_PER_PAGE)
+  );
+  const currentPage = Math.min(page, totalPages);
+  const pageStart =
+    filteredAppointments.length === 0
+      ? 0
+      : (currentPage - 1) * TICKETS_PER_PAGE + 1;
+  const pageEnd = Math.min(
+    currentPage * TICKETS_PER_PAGE,
+    filteredAppointments.length
+  );
+  const paginatedAppointments = filteredAppointments.slice(
+    (currentPage - 1) * TICKETS_PER_PAGE,
+    currentPage * TICKETS_PER_PAGE
+  );
+
+  useEffect(() => {
+    setPage(1);
+  }, [filter, query]);
+
+  useEffect(() => {
+    if (page > totalPages) {
+      setPage(totalPages);
+    }
+  }, [page, totalPages]);
 
   const counts = useMemo(
     () => ({
@@ -177,6 +216,10 @@ export function AppointmentsDashboard({
     }),
     [appointments]
   );
+  const selectedAppointment =
+    appointments.find(
+      (appointment) => appointment.id === selectedAppointmentId
+    ) ?? null;
 
   const updateStatus = async (
     appointmentId: string,
@@ -211,14 +254,47 @@ export function AppointmentsDashboard({
         )
       );
     } catch (updateError) {
-      setError(
+      const message =
         updateError instanceof Error
           ? updateError.message
-          : "Status could not be updated."
-      );
+          : "Status could not be updated.";
+      setError(message);
+      throw new Error(message);
     } finally {
       setUpdatingId(undefined);
     }
+  };
+
+  const replaceAppointment = (updated: OrbWeaverAppointmentRecord) => {
+    setAppointments((current) =>
+      current.map((appointment) =>
+        appointment.id === updated.id ? updated : appointment
+      )
+    );
+  };
+
+  const updateOrderDetails = async (
+    appointmentId: string,
+    details: OrbWeaverEditableAppointmentDetails
+  ) => {
+    const response = await fetch(
+      `/api/orb-weaver/backoffice/appointments/${appointmentId}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ details }),
+      }
+    );
+    const result = (await response.json()) as {
+      appointment?: OrbWeaverAppointmentRecord;
+      message?: string;
+    };
+
+    if (!response.ok || !result.appointment) {
+      throw new Error(result.message || "Order details could not be updated.");
+    }
+
+    replaceAppointment(result.appointment);
   };
 
   return (
@@ -271,10 +347,14 @@ export function AppointmentsDashboard({
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
             <div>
               <h2 className="text-xl font-semibold text-white">
-                Appointment requests
+                Work tickets
               </h2>
-              <p className="mt-1 text-sm text-stone-500">
-                {filteredAppointments.length} of {appointments.length} shown
+              <p
+                aria-live="polite"
+                className="mt-1 text-sm text-stone-500"
+              >
+                Showing {pageStart}–{pageEnd} of {filteredAppointments.length}{" "}
+                matching orders
               </p>
             </div>
 
@@ -352,206 +432,218 @@ export function AppointmentsDashboard({
             </p>
           </div>
         ) : (
-          <div className="divide-y divide-white/[0.07]">
-            {filteredAppointments.map((appointment) => {
-              const pickupPoint =
-                appointment.pickupLatitude !== null &&
-                appointment.pickupLongitude !== null
-                  ? {
-                      latitude: appointment.pickupLatitude,
-                      longitude: appointment.pickupLongitude,
-                    }
-                  : null;
-              const handoffLabel =
+          <>
+            <div className="grid gap-6 p-5 md:grid-cols-2 xl:grid-cols-3 sm:p-6">
+              {paginatedAppointments.map((appointment) => {
+              const displayedTotal =
+                appointment.finalTotal ?? appointment.estimatedSubtotal;
+              const handoffMethod =
                 appointment.handoffMethod === "pickup_return"
-                  ? "Pickup"
-                  : "Drop-off";
-              const completionLabel =
-                appointment.handoffMethod === "pickup_return"
-                  ? "Return"
-                  : "Claim";
+                  ? "Pickup + return"
+                  : appointment.handoffMethod === "drop_off"
+                    ? "Customer drop-off"
+                    : "Handoff pending";
+              const handoffWindow =
+                appointment.handoffWindow ??
+                timeWindowName(appointment.preferredWindow);
 
-              return (
-                <article
-                  key={appointment.id}
-                  className="grid gap-5 p-5 transition hover:bg-white/[0.02] sm:p-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_auto] xl:items-center"
-                >
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h3 className="font-semibold text-white">
-                        {appointment.customerName}
-                      </h3>
+                return (
+                  <div
+                    key={appointment.id}
+                    className="flex min-w-0 flex-col drop-shadow-[0_18px_28px_rgba(0,0,0,0.34)]"
+                  >
+                  <div
+                    aria-hidden="true"
+                    className="h-3 shrink-0"
+                    style={paperEdgeStyle}
+                  />
+                  <article
+                    className="flex h-full flex-1 flex-col bg-[#f4eddd] font-mono text-[#2d2922] transition duration-200 hover:-translate-y-0.5"
+                    style={{
+                      backgroundImage:
+                        "radial-gradient(rgba(91,76,48,0.09) 0.7px, transparent 0.7px)",
+                      backgroundSize: "5px 5px",
+                    }}
+                  >
+                    <header className="flex items-start justify-between gap-3 px-5 pb-4 pt-5">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 text-[#6f5638]">
+                          <FaReceipt aria-hidden="true" />
+                          <p className="text-[0.68rem] font-bold uppercase tracking-[0.15em]">
+                            Work order
+                          </p>
+                        </div>
+                        <p className="mt-2 text-xl font-black tracking-[0.12em] text-[#171511]">
+                          {appointment.reference}
+                        </p>
+                      </div>
                       <span
-                        className={`rounded-full border px-2.5 py-1 text-[0.68rem] font-semibold ${statusClasses[appointment.status]}`}
+                        className={`-rotate-2 border-2 px-2 py-1 font-sans text-[0.64rem] font-black uppercase tracking-[0.1em] ${statusStampClasses[appointment.status]}`}
                       >
                         {statusLabels[appointment.status]}
                       </span>
-                    </div>
-                    <p className="mt-2 font-mono text-xs font-semibold tracking-wider text-amber-300">
-                      Ref: {appointment.reference}
-                    </p>
-                    <div className="mt-3 flex flex-col gap-2 text-sm text-stone-400">
-                      <a
-                        href={`tel:${appointment.phone}`}
-                        className="inline-flex items-center gap-2 hover:text-amber-300"
-                      >
-                        <FaPhoneAlt aria-hidden="true" className="text-xs" />
-                        {appointment.phone}
-                      </a>
-                      {appointment.email && (
-                        <a
-                          href={`mailto:${appointment.email}`}
-                          className="inline-flex items-center gap-2 break-all hover:text-amber-300"
-                        >
-                          <FaEnvelope aria-hidden="true" className="text-xs" />
-                          {appointment.email}
-                        </a>
-                      )}
-                    </div>
-                  </div>
+                    </header>
 
-                  <div className="text-sm">
-                    <p className="font-medium text-stone-200">
-                      {serviceName(appointment.service)}
-                    </p>
-                    <p className="mt-1 text-stone-500">
-                      {appointment.helmetCount}{" "}
-                      {appointment.helmetCount === 1 ? "helmet" : "helmets"}
-                      {appointment.serviceUnitPrice !== null &&
-                        ` · ${formatPeso(appointment.serviceUnitPrice)} each`}
-                    </p>
-                    {appointment.requestedAddOns.length > 0 && (
-                      <div className="mt-3 border-t border-white/[0.07] pt-3">
-                        <p className="text-xs font-semibold uppercase tracking-wider text-stone-500">
-                          Add-ons
-                        </p>
-                        <ul className="mt-2 space-y-1.5 text-xs text-stone-400">
-                          {appointment.requestedAddOns.map((addOn) => (
-                            <li
-                              key={addOn.id}
-                              className="flex items-start justify-between gap-3"
-                            >
-                              <span>
-                                {addOn.name}
-                                {addOn.quantity > 1 && ` × ${addOn.quantity}`}
-                              </span>
-                              <span className="shrink-0 text-stone-300">
-                                {formatPeso(addOn.subtotal)}
-                              </span>
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    )}
-                    {appointment.estimatedSubtotal !== null && (
-                      <p className="mt-3 flex items-center justify-between gap-3 border-t border-white/[0.07] pt-3 font-semibold text-amber-300">
-                        <span>Estimated subtotal</span>
-                        <span>{formatPeso(appointment.estimatedSubtotal)}</span>
+                    <section className="border-y-2 border-dashed border-[#a99f8d] px-5 py-4">
+                      <h3 className="truncate font-sans text-lg font-black text-[#2d2922]">
+                        {appointment.customerName}
+                      </h3>
+                      <p className="mt-1 font-sans text-sm font-semibold text-[#5f574b]">
+                        {serviceName(appointment.service)}
                       </p>
-                    )}
-                  </div>
+                      <p className="mt-1 font-sans text-xs text-[#7a7163]">
+                        {appointment.helmetCount}{" "}
+                        {appointment.helmetCount === 1
+                          ? "helmet"
+                          : "helmets"}
+                        {appointment.requestedAddOns.length > 0 &&
+                          ` · ${appointment.requestedAddOns.length} ${
+                            appointment.requestedAddOns.length === 1
+                              ? "add-on"
+                              : "add-ons"
+                          }`}
+                      </p>
+                    </section>
 
-                  <div className="text-sm">
-                    <p className="font-medium text-stone-200">
-                      {formatDate(appointment.preferredDate)}
-                    </p>
-                    <p className="mt-1 text-stone-400">
-                      <span className="text-stone-500">{handoffLabel}:</span>{" "}
-                      {appointment.handoffWindow ??
-                        timeWindowName(appointment.preferredWindow)}
-                    </p>
-                    {appointment.completionWindow && (
-                      <p className="mt-1 text-stone-400">
-                        <span className="text-stone-500">
-                          {completionLabel}:
-                        </span>{" "}
-                        {appointment.completionWindow}
-                      </p>
-                    )}
-                    <div className="mt-3 border-t border-white/[0.07] pt-3">
-                      <p className="flex items-start gap-2 font-medium text-stone-300">
-                        <FaMapMarkerAlt
-                          aria-hidden="true"
-                          className="mt-0.5 shrink-0 text-amber-300"
-                        />
-                        {appointment.handoffMethod === "pickup_return"
-                          ? "Pickup + return"
-                          : appointment.handoffMethod === "drop_off"
-                          ? "Customer drop-off at meetup"
-                          : "Handoff not recorded"}
-                      </p>
-                      {appointment.pickupArea && (
-                        <p className="mt-1 pl-5 text-xs leading-5 text-stone-500">
-                          {appointment.pickupArea}
-                        </p>
-                      )}
-                      {pickupPoint && (
-                        <div className="mt-2 flex flex-wrap gap-2 pl-5">
-                          <a
-                            href={getOrbWeaverPickupMapUrl(pickupPoint)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-300/20 bg-amber-300/[0.07] px-3 py-1.5 text-xs font-semibold text-amber-200 transition hover:bg-amber-400 hover:text-black"
-                          >
-                            <FaMapMarkerAlt aria-hidden="true" />
-                            View pin
-                          </a>
-                          <a
-                            href={getOrbWeaverPickupDirectionsUrl(pickupPoint)}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-white/10 bg-white/[0.04] px-3 py-1.5 text-xs font-semibold text-stone-300 transition hover:border-amber-300/30 hover:text-amber-200"
-                          >
-                            <FaExternalLinkAlt aria-hidden="true" />
-                            Directions
-                          </a>
+                    <div className="flex-1 px-5 py-4">
+                      <dl className="space-y-3 font-sans text-xs">
+                        <div className="flex items-start gap-3">
+                          <FaCalendarCheck
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-[#8a4f1f]"
+                          />
+                          <div>
+                            <dt className="font-bold uppercase tracking-[0.08em] text-[#7a7163]">
+                              Handoff schedule
+                            </dt>
+                            <dd className="mt-1 font-semibold text-[#3f392f]">
+                              {formatDate(appointment.preferredDate)}
+                            </dd>
+                            <dd className="mt-0.5 text-[#746b5d]">
+                              {handoffWindow}
+                            </dd>
+                          </div>
                         </div>
-                      )}
-                    </div>
-                    {appointment.notes && (
-                      <details className="mt-2">
-                        <summary className="cursor-pointer text-xs text-amber-300">
-                          Customer note
-                        </summary>
-                        <p className="mt-2 max-w-md whitespace-pre-wrap text-xs leading-5 text-stone-400">
-                          {appointment.notes}
-                        </p>
-                      </details>
-                    )}
-                  </div>
+                        <div className="flex items-start gap-3 border-t border-dotted border-[#bbb09e] pt-3">
+                          <FaMotorcycle
+                            aria-hidden="true"
+                            className="mt-0.5 shrink-0 text-[#8a4f1f]"
+                          />
+                          <div>
+                            <dt className="font-bold uppercase tracking-[0.08em] text-[#7a7163]">
+                              Handoff
+                            </dt>
+                            <dd className="mt-1 font-semibold text-[#3f392f]">
+                              {handoffMethod}
+                            </dd>
+                          </div>
+                        </div>
+                      </dl>
 
-                  <div>
-                    <label
-                      htmlFor={`status-${appointment.id}`}
-                      className="mb-1.5 block text-xs text-stone-500"
-                    >
-                      Update status
-                    </label>
-                    <select
-                      id={`status-${appointment.id}`}
-                      value={appointment.status}
-                      disabled={updatingId === appointment.id}
-                      onChange={(event) =>
-                        updateStatus(
-                          appointment.id,
-                          event.target.value as OrbWeaverAppointmentStatus
-                        )
-                      }
-                      className="min-h-11 rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-stone-200 outline-none focus:border-amber-300 focus:ring-2 focus:ring-amber-300/20 disabled:cursor-wait disabled:opacity-60"
-                    >
-                      {ORB_WEAVER_STATUSES.map((status) => (
-                        <option key={status} value={status}>
-                          {statusLabels[status]}
-                        </option>
-                      ))}
-                    </select>
+                      <div className="mt-4 flex items-end justify-between gap-4 border-t-2 border-[#4d463b] pt-4">
+                        <div>
+                          <p className="font-sans text-[0.68rem] font-black uppercase tracking-[0.1em] text-[#5f574b]">
+                            {appointment.finalTotal === null
+                              ? "Current subtotal"
+                              : "Final total"}
+                          </p>
+                          <p className="mt-1 font-sans text-[0.7rem] text-[#857b6b]">
+                            {appointment.deliveryDistanceKm === null
+                              ? "Delivery distance pending"
+                              : `${appointment.deliveryDistanceKm.toFixed(
+                                  2
+                                )} km delivery route`}
+                          </p>
+                        </div>
+                        <p className="shrink-0 text-2xl font-black text-[#171511]">
+                          {displayedTotal === null
+                            ? "—"
+                            : formatPeso(displayedTotal)}
+                        </p>
+                      </div>
+                    </div>
+
+                    <footer className="border-t-2 border-dashed border-[#a99f8d] px-5 py-4">
+                      <button
+                        type="button"
+                        aria-haspopup="dialog"
+                        onClick={() =>
+                          setSelectedAppointmentId(appointment.id)
+                        }
+                        className="inline-flex min-h-11 w-full items-center justify-center gap-2 border-2 border-[#3f392f] bg-[#3f392f] px-4 py-2 font-sans text-sm font-black text-[#f4eddd] transition hover:bg-[#201d18] focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#b96f2e]/20"
+                      >
+                        <FaEye aria-hidden="true" />
+                        View details + manage
+                      </button>
+                    </footer>
+                  </article>
+                  <div
+                    aria-hidden="true"
+                    className="h-3 shrink-0 rotate-180"
+                    style={paperEdgeStyle}
+                  />
                   </div>
-                </article>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+
+            <nav
+              aria-label="Work ticket pages"
+              className="flex flex-col gap-3 border-t border-white/[0.08] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6"
+            >
+              <p className="text-sm text-stone-500">
+                Page{" "}
+                <span className="font-semibold text-stone-300">
+                  {currentPage}
+                </span>{" "}
+                of{" "}
+                <span className="font-semibold text-stone-300">
+                  {totalPages}
+                </span>
+              </p>
+              <div className="grid grid-cols-2 gap-2 sm:flex">
+                <button
+                  type="button"
+                  disabled={currentPage === 1}
+                  onClick={() =>
+                    setPage((current) => Math.max(1, current - 1))
+                  }
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-semibold text-stone-300 transition hover:border-amber-300/30 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  <FaChevronLeft aria-hidden="true" className="text-xs" />
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  disabled={currentPage === totalPages}
+                  onClick={() =>
+                    setPage((current) => Math.min(totalPages, current + 1))
+                  }
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-semibold text-stone-300 transition hover:border-amber-300/30 hover:text-amber-200 disabled:cursor-not-allowed disabled:opacity-35"
+                >
+                  Next
+                  <FaChevronRight aria-hidden="true" className="text-xs" />
+                </button>
+              </div>
+            </nav>
+          </>
         )}
       </section>
+
+      {selectedAppointment && (
+        <BackofficeTicketModal
+          appointment={selectedAppointment}
+          isUpdatingStatus={updatingId === selectedAppointment.id}
+          onClose={closeTicket}
+          onStatusChange={(status) =>
+            updateStatus(selectedAppointment.id, status)
+          }
+          onAppointmentSaved={replaceAppointment}
+          onDetailsSave={(details) =>
+            updateOrderDetails(selectedAppointment.id, details)
+          }
+        />
+      )}
     </>
   );
 }
