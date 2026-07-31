@@ -3,7 +3,7 @@ import {
   createBangusDeliveryTable,
   listBangusDeliveryTables,
 } from "@/lib/bangus/orders";
-import { validateBangusDeliveryDate } from "@/lib/bangus/order-validation";
+import { validateBangusDeliveryTable } from "@/lib/bangus/order-validation";
 import {
   isOrbWeaverAuthenticated,
   isSameOriginRequest,
@@ -41,29 +41,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ message: "Request rejected." }, { status: 403 });
   }
 
-  const body = (await request.json().catch(() => null)) as {
-    deliveryDate?: unknown;
-  } | null;
-  const deliveryDate = validateBangusDeliveryDate(body?.deliveryDate);
+  const table = validateBangusDeliveryTable(
+    await request.json().catch(() => null)
+  );
 
-  if (!deliveryDate) {
+  if (!table) {
     return NextResponse.json(
-      { message: "Choose a valid delivery date." },
+      { message: "Enter an order table name and a valid delivery date." },
       { status: 400 }
     );
   }
 
   try {
-    const deliveryTable = await createBangusDeliveryTable(deliveryDate);
+    const deliveryTable = await createBangusDeliveryTable(
+      table.name,
+      table.deliveryDate
+    );
     return NextResponse.json({ deliveryTable }, { status: 201 });
   } catch (error) {
-    if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json(
-        { message: "A table for that delivery date already exists." },
-        { status: 409 }
-      );
-    }
-
     console.error("Unable to create Bangus delivery table", error);
     return NextResponse.json(
       { message: "Delivery table could not be created." },

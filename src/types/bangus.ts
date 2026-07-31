@@ -63,6 +63,7 @@ export interface BangusOrderInput {
 
 export interface BangusDeliveryTableRecord {
   id: string;
+  name: string;
   deliveryDate: string;
   orders: BangusOrderRecord[];
   createdAt: string;

@@ -292,11 +292,12 @@ export function OrderFormModal({
                 <span className="text-xs text-stone-500">Payment method</span>
                 <select
                   value={paymentMethod ?? ""}
-                  onChange={(event) =>
-                    setPaymentMethod(
-                      (event.target.value as BangusPaymentMethod) || null
-                    )
-                  }
+                  onChange={(event) => {
+                    const method =
+                      (event.target.value as BangusPaymentMethod) || null;
+                    setPaymentMethod(method);
+                    if (method) setPaid(true);
+                  }}
                   className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300"
                 >
                   <option value="">Not set</option>

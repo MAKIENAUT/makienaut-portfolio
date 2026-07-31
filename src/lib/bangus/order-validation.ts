@@ -21,6 +21,23 @@ export const validateBangusDeliveryDate = (value: unknown) => {
     : value;
 };
 
+export const validateBangusDeliveryTable = (value: unknown) => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const body = value as Record<string, unknown>;
+  const name =
+    typeof body.name === "string"
+      ? body.name.trim().replace(/\s+/g, " ")
+      : "";
+  const deliveryDate = validateBangusDeliveryDate(body.deliveryDate);
+
+  return name && name.length <= 120 && deliveryDate
+    ? { name, deliveryDate }
+    : null;
+};
+
 const validatePaymentMethod = (
   value: unknown
 ): BangusPaymentMethod | null | undefined => {
@@ -91,7 +108,7 @@ export const validateBangusOrder = (
     order: {
       customerName,
       received: body.received === true,
-      paid: body.paid === true,
+      paid: paymentMethod ? true : body.paid === true,
       paymentMethod,
       quantities,
     },
@@ -128,7 +145,7 @@ export const validateBangusOrderStatus = (
     ok: true,
     status: {
       received: body.received,
-      paid: body.paid,
+      paid: paymentMethod ? true : body.paid,
       paymentMethod,
     },
   };

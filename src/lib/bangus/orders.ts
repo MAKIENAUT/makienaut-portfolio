@@ -40,6 +40,7 @@ interface StoredOrder {
 
 interface StoredDeliveryTable {
   id: string;
+  name: string;
   deliveryDate: Date;
   orders: StoredOrder[];
   createdAt: Date;
@@ -78,6 +79,7 @@ const serializeDeliveryTable = (
   table: StoredDeliveryTable
 ): BangusDeliveryTableRecord => ({
   id: table.id,
+  name: table.name,
   deliveryDate: table.deliveryDate.toISOString().slice(0, 10),
   orders: table.orders.map(serializeOrder),
   createdAt: table.createdAt.toISOString(),
@@ -126,7 +128,7 @@ export const listBangusDeliveryTables = async () => {
   const database = getBangusDatabase();
   const tables = await database.bangusDeliveryTable.findMany({
     include: deliveryTableInclude,
-    orderBy: { deliveryDate: "desc" },
+    orderBy: [{ deliveryDate: "desc" }, { name: "asc" }],
   });
 
   return tables.map((table) =>
@@ -134,10 +136,14 @@ export const listBangusDeliveryTables = async () => {
   );
 };
 
-export const createBangusDeliveryTable = async (deliveryDate: string) => {
+export const createBangusDeliveryTable = async (
+  name: string,
+  deliveryDate: string
+) => {
   const database = getBangusDatabase();
   const table = await database.bangusDeliveryTable.create({
     data: {
+      name,
       deliveryDate: new Date(`${deliveryDate}T00:00:00.000Z`),
     },
     include: deliveryTableInclude,

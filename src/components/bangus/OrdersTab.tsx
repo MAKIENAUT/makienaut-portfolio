@@ -4,8 +4,11 @@ import { FormEvent, useCallback, useMemo, useState } from "react";
 import {
   FaCalendarAlt,
   FaEdit,
+  FaEye,
+  FaEyeSlash,
   FaFileDownload,
   FaPlus,
+  FaSearch,
   FaSyncAlt,
   FaTrash,
   FaTruck,
@@ -53,6 +56,9 @@ const formatDeliveryDate = (value: string, includeWeekday = true) =>
     year: "numeric",
   }).format(new Date(`${value}T00:00:00.000Z`));
 
+const formatTableLabel = (table: BangusDeliveryTableRecord) =>
+  `${table.name} · ${formatDeliveryDate(table.deliveryDate, false)}`;
+
 const getManilaDate = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
@@ -74,6 +80,7 @@ export function OrdersTab({
     initialDeliveryTables[0]?.id ?? ""
   );
   const [newDeliveryDate, setNewDeliveryDate] = useState(getManilaDate);
+  const [newTableName, setNewTableName] = useState("");
   const [showDateForm, setShowDateForm] = useState(
     initialDeliveryTables.length === 0
   );
@@ -86,6 +93,8 @@ export function OrdersTab({
     null
   );
   const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
+  const [orderQuery, setOrderQuery] = useState("");
+  const [showSupplierPrices, setShowSupplierPrices] = useState(true);
 
   const selectedTable =
     deliveryTables.find((table) => table.id === selectedTableId) ??
@@ -96,15 +105,35 @@ export function OrdersTab({
 
   const productColumns = products;
 
+  const filteredOrders = useMemo(() => {
+    const normalizedQuery = orderQuery.trim().toLowerCase();
+    if (!normalizedQuery || !selectedTable) return selectedTable?.orders ?? [];
+
+    return selectedTable.orders.filter((order) =>
+      [
+        order.customerName,
+        order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
+        order.paid ? "paid" : "unpaid",
+        order.received ? "received" : "not received",
+        ...order.items.map((item) => {
+          const product = productColumns.find(
+            (candidate) => candidate.id === item.productId
+          );
+          return product ? getBangusProductFullLabel(product) : "";
+        }),
+      ].some((value) => value.toLowerCase().includes(normalizedQuery))
+    );
+  }, [orderQuery, productColumns, selectedTable]);
+
   const tableTotals = useMemo(() => {
-    const orders = selectedTable?.orders ?? [];
+    const orders = filteredOrders;
     return {
       retail: orders.reduce((total, order) => total + order.retailTotal, 0),
       supplier: orders.reduce((total, order) => total + order.supplierTotal, 0),
       paid: orders.filter((order) => order.paid).length,
       received: orders.filter((order) => order.received).length,
     };
-  }, [selectedTable]);
+  }, [filteredOrders]);
 
   const replaceOrder = useCallback(
     (updatedOrder: BangusOrderRecord) => {
@@ -172,7 +201,10 @@ export function OrdersTab({
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ deliveryDate: newDeliveryDate }),
+          body: JSON.stringify({
+            name: newTableName,
+            deliveryDate: newDeliveryDate,
+          }),
         }
       );
       const result = (await response.json()) as {
@@ -189,6 +221,7 @@ export function OrdersTab({
         )
       );
       setSelectedTableId(result.deliveryTable.id);
+      setNewTableName("");
       setShowDateForm(false);
     } catch (createError) {
       setError(
@@ -205,10 +238,7 @@ export function OrdersTab({
     if (
       !selectedTable ||
       !window.confirm(
-        `Remove the ${formatDeliveryDate(
-          selectedTable.deliveryDate,
-          false
-        )} table and all ${selectedTable.orders.length} orders in it?`
+        `Remove “${selectedTable.name}” and all ${selectedTable.orders.length} orders in it?`
       )
     ) {
       return;
@@ -285,6 +315,15 @@ export function OrdersTab({
     setBusyOrderId(order.id);
     setError("");
 
+    const paymentMethod =
+      changes.paymentMethod === undefined
+        ? order.paymentMethod
+        : changes.paymentMethod;
+    const paid =
+      changes.paymentMethod === undefined
+        ? (changes.paid ?? order.paid)
+        : paymentMethod !== null;
+
     try {
       const response = await fetch(
         `/api/bangus/backoffice/orders/${order.id}`,
@@ -293,11 +332,8 @@ export function OrdersTab({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             received: changes.received ?? order.received,
-            paid: changes.paid ?? order.paid,
-            paymentMethod:
-              changes.paymentMethod === undefined
-                ? order.paymentMethod
-                : changes.paymentMethod,
+            paid,
+            paymentMethod,
           }),
         }
       );
@@ -401,15 +437,17 @@ export function OrdersTab({
               </p>
               <h2 className="mt-2 text-xl font-semibold text-white">
                 {selectedTable
-                  ? formatDeliveryDate(selectedTable.deliveryDate)
-                  : "Create your first delivery table"}
+                  ? selectedTable.name
+                  : "Create your first order table"}
               </h2>
               <p className="mt-1 text-sm text-stone-500">
                 {selectedTable
-                  ? `${selectedTable.orders.length} customer ${
+                  ? `${formatDeliveryDate(selectedTable.deliveryDate)} · ${
+                      selectedTable.orders.length
+                    } customer ${
                       selectedTable.orders.length === 1 ? "order" : "orders"
                     }`
-                  : "Each table is named using its delivery date."}
+                  : "Give each order table a name and delivery date."}
               </p>
             </div>
 
@@ -427,7 +465,7 @@ export function OrdersTab({
                   >
                     {deliveryTables.map((table) => (
                       <option key={table.id} value={table.id}>
-                        {formatDeliveryDate(table.deliveryDate, false)}
+                        {formatTableLabel(table)}
                       </option>
                     ))}
                   </select>
@@ -451,10 +489,23 @@ export function OrdersTab({
                 className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-300/10"
               >
                 <FaCalendarAlt aria-hidden="true" />
-                New date table
+                New order table
               </button>
               {selectedTable && (
                 <>
+                  <button
+                    type="button"
+                    onClick={() => setShowSupplierPrices((current) => !current)}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                    aria-pressed={showSupplierPrices}
+                  >
+                    {showSupplierPrices ? (
+                      <FaEyeSlash aria-hidden="true" />
+                    ) : (
+                      <FaEye aria-hidden="true" />
+                    )}
+                    {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                  </button>
                   <button
                     type="button"
                     disabled={selectedTable.orders.length === 0}
@@ -481,8 +532,21 @@ export function OrdersTab({
           {showDateForm && (
             <form
               onSubmit={createDeliveryTable}
-              className="mt-5 flex flex-col gap-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 sm:flex-row sm:items-end"
+              className="mt-5 grid gap-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
             >
+              <label className="sm:col-span-3">
+                <span className="text-sm font-medium text-stone-300">
+                  Order table name
+                </span>
+                <input
+                  required
+                  maxLength={120}
+                  value={newTableName}
+                  onChange={(event) => setNewTableName(event.target.value)}
+                  placeholder="e.g. August 3 pickup orders"
+                  className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300"
+                />
+              </label>
               <label className="flex-1">
                 <span className="text-sm font-medium text-stone-300">
                   Delivery date
@@ -513,6 +577,30 @@ export function OrdersTab({
                 </button>
               )}
             </form>
+          )}
+
+          {selectedTable && selectedTable.orders.length > 0 && (
+            <label className="mt-5 block">
+              <span className="sr-only">Search orders in this table</span>
+              <div className="relative">
+                <FaSearch
+                  aria-hidden="true"
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
+                />
+                <input
+                  type="search"
+                  value={orderQuery}
+                  onChange={(event) => setOrderQuery(event.target.value)}
+                  placeholder="Search this table by customer, product, payment, or status…"
+                  className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15"
+                />
+              </div>
+              {orderQuery && (
+                <p className="mt-2 text-xs text-stone-500">
+                  {filteredOrders.length} of {selectedTable.orders.length} orders shown
+                </p>
+              )}
+            </label>
           )}
 
           {error && (
@@ -552,17 +640,19 @@ export function OrdersTab({
                 },
                 {
                   label: "Supplier total",
-                  value: formatPeso(tableTotals.supplier),
+                  value: showSupplierPrices
+                    ? formatPeso(tableTotals.supplier)
+                    : "Hidden",
                   classes: "text-stone-200",
                 },
                 {
                   label: "Paid",
-                  value: `${tableTotals.paid}/${selectedTable.orders.length}`,
+                  value: `${tableTotals.paid}/${filteredOrders.length}`,
                   classes: "text-cyan-300",
                 },
                 {
                   label: "Received",
-                  value: `${tableTotals.received}/${selectedTable.orders.length}`,
+                  value: `${tableTotals.received}/${filteredOrders.length}`,
                   classes: "text-violet-300",
                 },
               ].map((item) => (
@@ -593,10 +683,27 @@ export function OrdersTab({
                   Add the first order
                 </button>
               </div>
+            ) : filteredOrders.length === 0 ? (
+              <div className="px-5 py-16 text-center">
+                <FaSearch
+                  aria-hidden="true"
+                  className="mx-auto text-4xl text-stone-700"
+                />
+                <p className="mt-4 font-medium text-stone-300">
+                  No orders match this search.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setOrderQuery("")}
+                  className="mt-4 text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
+                >
+                  Clear search
+                </button>
+              </div>
             ) : (
               <>
               <div className="divide-y divide-white/[0.08] md:hidden">
-                {selectedTable.orders.map((order) => {
+                {filteredOrders.map((order) => {
                   const isBusy = busyOrderId === order.id;
                   const orderedItems = order.items.filter(
                     (item) => item.quantity > 0
@@ -644,7 +751,9 @@ export function OrdersTab({
                         <div>
                           <p className="text-xs text-stone-500">Supplier total</p>
                           <p className="mt-1 font-semibold tabular-nums text-stone-200">
-                            {formatPeso(order.supplierTotal)}
+                            {showSupplierPrices
+                              ? formatPeso(order.supplierTotal)
+                              : "Hidden"}
                           </p>
                         </div>
                       </div>
@@ -742,9 +851,11 @@ export function OrdersTab({
                       <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
                         Retail price
                       </th>
-                      <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
-                        Supplier price
-                      </th>
+                      {showSupplierPrices && (
+                        <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
+                          Supplier price
+                        </th>
+                      )}
                       <th className="sticky top-0 z-20 min-w-24 bg-[#0d100f] px-4 py-4 text-center font-semibold">
                         Received
                       </th>
@@ -766,7 +877,7 @@ export function OrdersTab({
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-white/[0.06]">
-                    {selectedTable.orders.map((order) => {
+                    {filteredOrders.map((order) => {
                       const itemByProductId = new Map(
                         order.items.map((item) => [item.productId, item])
                       );
@@ -811,9 +922,11 @@ export function OrdersTab({
                           <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-300">
                             {formatPeso(order.retailTotal)}
                           </td>
-                          <td className="px-4 py-3 text-right tabular-nums text-stone-400">
-                            {formatPeso(order.supplierTotal)}
-                          </td>
+                          {showSupplierPrices && (
+                            <td className="px-4 py-3 text-right tabular-nums text-stone-400">
+                              {formatPeso(order.supplierTotal)}
+                            </td>
+                          )}
                           <td className="px-4 py-3 text-center">
                             <label className="inline-flex cursor-pointer items-center">
                               <span className="sr-only">
@@ -892,9 +1005,11 @@ export function OrdersTab({
                       <td className="px-4 py-4 text-right tabular-nums text-emerald-300">
                         {formatPeso(tableTotals.retail)}
                       </td>
-                      <td className="px-4 py-4 text-right tabular-nums text-stone-300">
-                        {formatPeso(tableTotals.supplier)}
-                      </td>
+                      {showSupplierPrices && (
+                        <td className="px-4 py-4 text-right tabular-nums text-stone-300">
+                          {formatPeso(tableTotals.supplier)}
+                        </td>
+                      )}
                       <td className="px-4 py-4 text-center text-cyan-200">
                         {tableTotals.received}
                       </td>
@@ -909,7 +1024,7 @@ export function OrdersTab({
                           key={product.id}
                           className="border-r border-white/[0.05] px-3 py-4 text-center tabular-nums text-cyan-200"
                         >
-                          {selectedTable.orders.reduce(
+                          {filteredOrders.reduce(
                             (total, order) =>
                               total +
                               (order.items.find(
@@ -949,6 +1064,7 @@ export function OrdersTab({
           deliveryDate={selectedTable.deliveryDate}
           order={viewingOrder}
           products={products}
+          showSupplierPrices={showSupplierPrices}
           onClose={() => setViewingOrderId(null)}
           onEdit={() => {
             setViewingOrderId(null);

@@ -22,6 +22,7 @@ interface OrderDetailsModalProps {
   deliveryDate: string;
   order: BangusOrderRecord;
   products: BangusProductRecord[];
+  showSupplierPrices: boolean;
   onClose: () => void;
   onEdit: () => void;
 }
@@ -52,6 +53,7 @@ export function OrderDetailsModal({
   deliveryDate,
   order,
   products,
+  showSupplierPrices,
   onClose,
   onEdit,
 }: OrderDetailsModalProps) {
@@ -130,25 +132,33 @@ export function OrderDetailsModal({
         </header>
 
         <div className="p-5 sm:p-6">
-          <section className="grid gap-3 sm:grid-cols-3">
+          <section
+            className={`grid gap-3 ${
+              showSupplierPrices ? "sm:grid-cols-3" : "sm:grid-cols-1"
+            }`}
+          >
             <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
               <p className="text-xs text-stone-500">Retail total</p>
               <p className="mt-2 text-xl font-semibold text-emerald-300">
                 {formatPeso(order.retailTotal)}
               </p>
             </article>
-            <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-              <p className="text-xs text-stone-500">Supplier total</p>
-              <p className="mt-2 text-xl font-semibold text-stone-200">
-                {formatPeso(order.supplierTotal)}
-              </p>
-            </article>
-            <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-              <p className="text-xs text-stone-500">Markup</p>
-              <p className="mt-2 text-xl font-semibold text-cyan-300">
-                {formatPeso(order.retailTotal - order.supplierTotal)}
-              </p>
-            </article>
+            {showSupplierPrices && (
+              <>
+                <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                  <p className="text-xs text-stone-500">Supplier total</p>
+                  <p className="mt-2 text-xl font-semibold text-stone-200">
+                    {formatPeso(order.supplierTotal)}
+                  </p>
+                </article>
+                <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                  <p className="text-xs text-stone-500">Markup</p>
+                  <p className="mt-2 text-xl font-semibold text-cyan-300">
+                    {formatPeso(order.retailTotal - order.supplierTotal)}
+                  </p>
+                </article>
+              </>
+            )}
           </section>
 
           <section className="mt-5 grid gap-3 rounded-2xl border border-white/[0.08] p-4 sm:grid-cols-3">
