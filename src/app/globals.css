@@ -143,6 +143,33 @@ body::before {
   background: #67a4a7;
 }
 
+.bangus-chip-scroll {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+
+.bangus-chip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.bangus-sheet-scroll {
+  scrollbar-color: #4f7375 transparent;
+  scrollbar-width: thin;
+}
+
+.bangus-sheet-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+
+.bangus-sheet-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.bangus-sheet-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: #4f7375;
+}
+
 .orb-weaver-page .leaflet-container {
   background: #171915;
   color: #1c1917;

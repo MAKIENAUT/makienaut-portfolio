@@ -42,37 +42,38 @@ export default async function BangusBackofficePage() {
 
   return (
     <div className="min-h-svh overflow-x-hidden bg-[#080c0b] text-stone-100">
-      <header className="border-b border-white/[0.08] bg-[#0b100f]/90 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-[96rem] flex-col gap-4 px-4 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-8 sm:py-5">
-          <div className="flex items-center gap-4">
-            <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-cyan-300 text-xl text-[#071211]">
+      <header className="sticky top-0 z-40 border-b border-white/[0.08] bg-[#0b100f]/95 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-[96rem] items-center justify-between gap-3 px-3 py-2.5 sm:px-8 sm:py-4">
+          <div className="flex min-w-0 items-center gap-3 sm:gap-4">
+            <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-cyan-300 text-lg text-[#071211] sm:h-12 sm:w-12 sm:text-xl">
               <FaFish aria-hidden="true" />
             </span>
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-cyan-300">
+            <div className="min-w-0">
+              <p className="text-[0.65rem] font-semibold uppercase tracking-[0.18em] text-cyan-300 sm:text-xs sm:tracking-[0.2em]">
                 Bangus business
               </p>
-              <h1 className="mt-1 text-xl font-semibold text-white">
-                Bangus order page
+              <h1 className="truncate text-base font-semibold text-white sm:mt-1 sm:text-xl">
+                Orders
               </h1>
             </div>
           </div>
 
-          <div className="flex items-center justify-between gap-2 sm:justify-start">
+          <div className="flex shrink-0 items-center gap-1 sm:gap-2">
             <Link
               href="/vroombroom/backoffice"
-              className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-stone-400 transition hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+              aria-label="Back to VroomBroom"
+              className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold text-stone-400 transition hover:bg-white/[0.04] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto sm:gap-2 sm:px-3"
             >
               <FaArrowLeft aria-hidden="true" />
-              VroomBroom
+              <span className="sr-only sm:not-sr-only">VroomBroom</span>
             </Link>
-            <OrbWeaverLogoutButton />
+            <OrbWeaverLogoutButton compactOnMobile />
           </div>
         </div>
       </header>
 
-      <main className="mx-auto min-w-0 max-w-[96rem] px-4 py-6 sm:px-8 sm:py-10">
-        <div className="mb-8">
+      <main className="mx-auto min-w-0 max-w-[96rem] px-3 pb-24 pt-3 sm:px-8 sm:py-10">
+        <div className="mb-8 hidden sm:block">
           <p className="text-sm text-stone-500">Back-office overview</p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
             Products and orders, kept simple.

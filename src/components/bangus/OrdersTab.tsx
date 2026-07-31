@@ -4,6 +4,7 @@ import { FormEvent, useCallback, useMemo, useState } from "react";
 import {
   FaCalendarAlt,
   FaEdit,
+  FaEllipsisH,
   FaEye,
   FaEyeSlash,
   FaFileDownload,
@@ -15,13 +16,13 @@ import {
 } from "react-icons/fa";
 import { OrderDetailsModal } from "@/components/bangus/OrderDetailsModal";
 import { OrderFormModal } from "@/components/bangus/OrderFormModal";
+import { PaymentMethodPicker } from "@/components/bangus/PaymentMethodPicker";
 import {
   getBangusProductAbbreviation,
   getBangusProductFullLabel,
 } from "@/lib/bangus/product-label";
 import { generateBangusSupplierOrderMarkdown } from "@/lib/bangus/supplier-order-markdown";
 import {
-  BANGUS_PAYMENT_METHODS,
   type BangusDeliveryTableRecord,
   type BangusOrderInput,
   type BangusOrderRecord,
@@ -428,19 +429,19 @@ export function OrdersTab({
 
   return (
     <>
-      <section className="min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111615]">
-        <header className="border-b border-white/[0.08] p-5 sm:p-6">
-          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
+      <section className="min-w-0 overflow-hidden rounded-xl border border-white/[0.08] bg-[#111615] sm:rounded-2xl">
+        <header className="border-b border-white/[0.08] p-3 sm:p-6">
+          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+            <div className="min-w-0">
+              <p className="hidden text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300 sm:block">
                 Delivery tables
               </p>
-              <h2 className="mt-2 text-xl font-semibold text-white">
+              <h2 className="truncate text-base font-semibold text-white sm:mt-2 sm:text-xl">
                 {selectedTable
                   ? selectedTable.name
                   : "Create your first order table"}
               </h2>
-              <p className="mt-1 text-sm text-stone-500">
+              <p className="mt-0.5 text-xs text-stone-500 sm:mt-1 sm:text-sm">
                 {selectedTable
                   ? `${formatDeliveryDate(selectedTable.deliveryDate)} · ${
                       selectedTable.orders.length
@@ -451,9 +452,9 @@ export function OrdersTab({
               </p>
             </div>
 
-            <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="flex flex-wrap gap-2 sm:flex-nowrap">
               {deliveryTables.length > 0 && (
-                <label>
+                <label className="min-w-0 basis-full sm:flex-1 sm:basis-auto">
                   <span className="sr-only">Choose delivery table</span>
                   <select
                     value={selectedTable?.id ?? ""}
@@ -461,7 +462,7 @@ export function OrdersTab({
                       setSelectedTableId(event.target.value);
                       setViewingOrderId(null);
                     }}
-                    className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:w-64"
+                    className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:min-h-11 sm:w-64 sm:rounded-xl"
                   >
                     {deliveryTables.map((table) => (
                       <option key={table.id} value={table.id}>
@@ -471,68 +472,75 @@ export function OrdersTab({
                   </select>
                 </label>
               )}
-              <button
-                type="button"
-                disabled={isRefreshing}
-                onClick={() => void refreshTables()}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 disabled:cursor-wait disabled:opacity-60"
-              >
-                <FaSyncAlt
-                  aria-hidden="true"
-                  className={isRefreshing ? "animate-spin" : ""}
-                />
-                <span className="sr-only sm:not-sr-only">Refresh</span>
-              </button>
+              {selectedTable && (
+                <button
+                  type="button"
+                  onClick={openNewOrder}
+                  className="inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-4 text-sm font-bold text-[#071211] transition hover:bg-cyan-200 sm:min-h-11 sm:flex-none sm:rounded-xl"
+                >
+                  <FaPlus aria-hidden="true" />
+                  Add order
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setShowDateForm((current) => !current)}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-300/10"
+                aria-label="Create a new order table"
+                title="New order table"
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-cyan-300/30 text-sm text-cyan-200 transition hover:bg-cyan-300/10 sm:min-h-11 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
               >
                 <FaCalendarAlt aria-hidden="true" />
-                New order table
+                <span className="sr-only sm:not-sr-only">New table</span>
               </button>
-              {selectedTable && (
-                <>
+              <details className="group relative shrink-0">
+                <summary
+                  aria-label="More table actions"
+                  className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-white/10 text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 sm:hidden [&::-webkit-details-marker]:hidden"
+                >
+                  <FaEllipsisH aria-hidden="true" />
+                </summary>
+                <div className="absolute right-0 top-12 z-30 grid w-56 gap-1 rounded-xl border border-white/10 bg-[#171c1a] p-2 shadow-2xl sm:static sm:flex sm:w-auto sm:bg-transparent sm:p-0 sm:shadow-none">
                   <button
                     type="button"
-                    onClick={() => setShowSupplierPrices((current) => !current)}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
-                    aria-pressed={showSupplierPrices}
+                    disabled={isRefreshing}
+                    onClick={() => void refreshTables()}
+                    className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-white/10"
                   >
-                    {showSupplierPrices ? (
-                      <FaEyeSlash aria-hidden="true" />
-                    ) : (
-                      <FaEye aria-hidden="true" />
-                    )}
-                    {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                    <FaSyncAlt aria-hidden="true" className={isRefreshing ? "animate-spin" : ""} />
+                    Refresh
                   </button>
-                  <button
-                    type="button"
-                    disabled={selectedTable.orders.length === 0}
-                    onClick={exportSupplierOrder}
-                    title="Download the supplier order as Markdown"
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-40"
-                  >
-                    <FaFileDownload aria-hidden="true" />
-                    Supplier Order
-                  </button>
-                  <button
-                    type="button"
-                    onClick={openNewOrder}
-                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071211] transition hover:bg-cyan-200"
-                  >
-                    <FaPlus aria-hidden="true" />
-                    Add order
-                  </button>
-                </>
-              )}
+                  {selectedTable && (
+                    <>
+                      <button
+                        type="button"
+                        onClick={() => setShowSupplierPrices((current) => !current)}
+                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-white/10"
+                        aria-pressed={showSupplierPrices}
+                      >
+                        {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                        {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                      </button>
+                      <button
+                        type="button"
+                        disabled={selectedTable.orders.length === 0}
+                        onClick={exportSupplierOrder}
+                        title="Download the supplier order as Markdown"
+                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-emerald-300/30"
+                      >
+                        <FaFileDownload aria-hidden="true" />
+                        Supplier order
+                      </button>
+                    </>
+                  )}
+                </div>
+              </details>
             </div>
           </div>
 
           {showDateForm && (
             <form
               onSubmit={createDeliveryTable}
-              className="mt-5 grid gap-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end"
+              className="mt-3 grid gap-2 rounded-lg border border-cyan-300/15 bg-cyan-300/[0.04] p-3 sm:mt-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end sm:gap-3 sm:rounded-xl sm:p-4"
             >
               <label className="sm:col-span-3">
                 <span className="text-sm font-medium text-stone-300">
@@ -544,7 +552,7 @@ export function OrdersTab({
                   value={newTableName}
                   onChange={(event) => setNewTableName(event.target.value)}
                   placeholder="e.g. August 3 pickup orders"
-                  className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300"
+                  className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 sm:mt-2 sm:min-h-11 sm:rounded-xl"
                 />
               </label>
               <label className="flex-1">
@@ -556,13 +564,13 @@ export function OrdersTab({
                   type="date"
                   value={newDeliveryDate}
                   onChange={(event) => setNewDeliveryDate(event.target.value)}
-                  className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none focus:border-cyan-300"
+                  className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none focus:border-cyan-300 sm:mt-2 sm:min-h-11 sm:rounded-xl"
                 />
               </label>
               <button
                 type="submit"
                 disabled={isCreatingTable}
-                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60"
+                  className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:rounded-xl"
               >
                 <FaPlus aria-hidden="true" />
                 {isCreatingTable ? "Creating…" : "Create table"}
@@ -580,7 +588,7 @@ export function OrdersTab({
           )}
 
           {selectedTable && selectedTable.orders.length > 0 && (
-            <label className="mt-5 block">
+            <label className="mt-3 block sm:mt-5">
               <span className="sr-only">Search orders in this table</span>
               <div className="relative">
                 <FaSearch
@@ -591,8 +599,8 @@ export function OrdersTab({
                   type="search"
                   value={orderQuery}
                   onChange={(event) => setOrderQuery(event.target.value)}
-                  placeholder="Search this table by customer, product, payment, or status…"
-                  className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15"
+                  placeholder="Search customer, item, or status…"
+                  className="min-h-10 w-full rounded-lg border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15 sm:min-h-11 sm:rounded-xl"
                 />
               </div>
               {orderQuery && (
@@ -630,7 +638,7 @@ export function OrdersTab({
           <>
             <section
               aria-label="Delivery table summary"
-              className="grid grid-cols-2 gap-px border-b border-white/[0.08] bg-white/[0.08] lg:grid-cols-4"
+              className="grid grid-cols-4 gap-px border-b border-white/[0.08] bg-white/[0.08]"
             >
               {[
                 {
@@ -656,9 +664,9 @@ export function OrdersTab({
                   classes: "text-violet-300",
                 },
               ].map((item) => (
-                <article key={item.label} className="bg-[#101412] p-4 sm:px-6">
-                  <p className="text-xs text-stone-500">{item.label}</p>
-                  <p className={`mt-1 text-xl font-semibold ${item.classes}`}>
+                <article key={item.label} className="min-w-0 bg-[#101412] px-2 py-2.5 sm:p-4 sm:px-6">
+                  <p className="truncate text-[0.62rem] text-stone-500 sm:text-xs">{item.label}</p>
+                  <p className={`mt-0.5 truncate text-sm font-semibold tabular-nums sm:mt-1 sm:text-xl ${item.classes}`}>
                     {item.value}
                   </p>
                 </article>
@@ -710,22 +718,37 @@ export function OrdersTab({
                   );
 
                   return (
-                    <article key={order.id} className="p-5">
-                      <div className="flex items-start justify-between gap-3">
+                    <article key={order.id} className="p-3">
+                      <div className="flex items-start gap-2">
                         <button
                           type="button"
                           onClick={() => setViewingOrderId(order.id)}
-                          className="min-w-0 text-left text-base font-semibold text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus-visible:text-cyan-200"
+                          className="min-w-0 flex-1 text-left underline-offset-4 transition hover:text-cyan-200 hover:underline focus-visible:text-cyan-200"
                         >
-                          {order.customerName}
+                          <span className="block truncate text-sm font-semibold text-white">
+                            {order.customerName}
+                          </span>
+                          <span className="mt-0.5 block text-[0.65rem] text-stone-500">
+                            {orderedItems.reduce((total, item) => total + item.quantity, 0)} item{orderedItems.reduce((total, item) => total + item.quantity, 0) === 1 ? "" : "s"} · Tap for details
+                          </span>
                         </button>
-                        <div className="flex shrink-0 gap-1">
+                        <div className="shrink-0 text-right">
+                          <p className="text-sm font-semibold tabular-nums text-emerald-300">
+                            {formatPeso(order.retailTotal)}
+                          </p>
+                          {showSupplierPrices && (
+                            <p className="text-[0.65rem] tabular-nums text-stone-500">
+                              {formatPeso(order.supplierTotal)} cost
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex shrink-0">
                           <button
                             type="button"
                             disabled={isBusy}
                             onClick={() => openEditOrder(order)}
                             aria-label={`Edit ${order.customerName}'s order`}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
                           >
                             <FaEdit aria-hidden="true" />
                           </button>
@@ -734,32 +757,15 @@ export function OrdersTab({
                             disabled={isBusy}
                             onClick={() => void deleteOrder(order)}
                             aria-label={`Remove ${order.customerName}'s order`}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
                           >
                             <FaTrash aria-hidden="true" />
                           </button>
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-black/20 p-3 text-sm">
-                        <div>
-                          <p className="text-xs text-stone-500">Retail total</p>
-                          <p className="mt-1 font-semibold tabular-nums text-emerald-300">
-                            {formatPeso(order.retailTotal)}
-                          </p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-stone-500">Supplier total</p>
-                          <p className="mt-1 font-semibold tabular-nums text-stone-200">
-                            {showSupplierPrices
-                              ? formatPeso(order.supplierTotal)
-                              : "Hidden"}
-                          </p>
-                        </div>
-                      </div>
-
-                      <div className="mt-4 grid grid-cols-2 gap-3">
-                        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 text-sm text-stone-200">
+                      <div className="mt-2 grid grid-cols-[1fr_1fr_minmax(0,1.15fr)] gap-1.5">
+                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
                             checked={order.received}
@@ -769,11 +775,11 @@ export function OrdersTab({
                                 received: event.target.checked,
                               })
                             }
-                            className="h-4 w-4 accent-cyan-300"
+                            className="h-3.5 w-3.5 accent-violet-300"
                           />
                           Received
                         </label>
-                        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 text-sm text-stone-200">
+                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
                             checked={order.paid}
@@ -781,40 +787,26 @@ export function OrdersTab({
                             onChange={(event) =>
                               void updateStatus(order, { paid: event.target.checked })
                             }
-                            className="h-4 w-4 accent-cyan-300"
+                            className="h-3.5 w-3.5 accent-cyan-300"
                           />
                           Paid
                         </label>
-                      </div>
-
-                      <label className="mt-3 block">
-                        <span className="text-xs text-stone-500">Payment method</span>
-                        <select
-                          value={order.paymentMethod ?? ""}
+                        <PaymentMethodPicker
+                          value={order.paymentMethod}
                           disabled={isBusy}
-                          onChange={(event) =>
+                          onChange={(paymentMethod) =>
                             void updateStatus(order, {
-                              paymentMethod:
-                                (event.target.value as BangusPaymentMethod) || null,
+                              paymentMethod,
                             })
                           }
-                          className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 disabled:opacity-50"
-                        >
-                          <option value="">Not set</option>
-                          {BANGUS_PAYMENT_METHODS.map((method) => (
-                            <option key={method} value={method}>
-                              {paymentLabels[method]}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
+                          label={`${order.customerName} payment method`}
+                          compact
+                        />
+                      </div>
 
-                      <div className="mt-4">
-                        <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone-500">
-                          Items
-                        </p>
+                      <div className="mt-2 min-w-0">
                         {orderedItems.length > 0 ? (
-                          <div className="mt-2 flex flex-wrap gap-2">
+                          <div className="bangus-chip-scroll flex gap-1.5 overflow-x-auto">
                             {orderedItems.map((item) => {
                               const product = productColumns.find(
                                 (candidate) => candidate.id === item.productId
@@ -823,17 +815,18 @@ export function OrdersTab({
                               return (
                                 <span
                                   key={item.productId}
-                                  className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.06] px-2.5 py-1.5 text-xs text-cyan-100"
+                                  title={product ? getBangusProductFullLabel(product) : "Unavailable product"}
+                                  className="shrink-0 rounded-md border border-cyan-300/15 bg-cyan-300/[0.06] px-2 py-1 text-[0.65rem] text-cyan-100"
                                 >
                                   {item.quantity} × {product
-                                    ? getBangusProductFullLabel(product)
+                                    ? getBangusProductAbbreviation(product)
                                     : "Unavailable product"}
                                 </span>
                               );
                             })}
                           </div>
                         ) : (
-                          <p className="mt-2 text-sm text-stone-500">No items added.</p>
+                          <p className="text-xs text-stone-500">No items added.</p>
                         )}
                       </div>
                     </article>
@@ -964,26 +957,17 @@ export function OrdersTab({
                             </label>
                           </td>
                           <td className="border-r border-white/[0.08] px-4 py-3">
-                            <select
-                              value={order.paymentMethod ?? ""}
+                            <PaymentMethodPicker
+                              value={order.paymentMethod}
                               disabled={isBusy}
-                              onChange={(event) =>
+                              onChange={(paymentMethod) =>
                                 void updateStatus(order, {
-                                  paymentMethod:
-                                    (event.target
-                                      .value as BangusPaymentMethod) || null,
+                                  paymentMethod,
                                 })
                               }
-                              aria-label={`${order.customerName} payment method`}
-                              className="min-h-9 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-2 text-xs text-stone-300 outline-none focus:border-cyan-300 disabled:opacity-50"
-                            >
-                              <option value="">Not set</option>
-                              {BANGUS_PAYMENT_METHODS.map((method) => (
-                                <option key={method} value={method}>
-                                  {paymentLabels[method]}
-                                </option>
-                              ))}
-                            </select>
+                              label={`${order.customerName} payment method`}
+                              compact
+                            />
                           </td>
                           {productColumns.map((product) => (
                             <td
@@ -1041,8 +1025,8 @@ export function OrdersTab({
               </>
             )}
 
-            <footer className="flex flex-col gap-3 border-t border-white/[0.08] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
-              <p className="text-xs text-stone-600">
+            <footer className="flex items-center justify-end border-t border-white/[0.08] px-3 py-2 sm:justify-between sm:px-6 sm:py-4">
+              <p className="hidden text-xs text-stone-600 sm:block">
                 Product headings are abbreviated. Hover over one to see its
                 full catalog name.
               </p>
@@ -1058,6 +1042,17 @@ export function OrdersTab({
           </>
         )}
       </section>
+
+      {selectedTable && (
+        <button
+          type="button"
+          onClick={openNewOrder}
+          className="fixed bottom-[max(1rem,env(safe-area-inset-bottom))] right-4 z-30 inline-flex min-h-12 items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 text-sm font-bold text-[#071211] shadow-[0_12px_36px_rgba(0,0,0,0.55)] transition hover:bg-cyan-200 md:hidden"
+        >
+          <FaPlus aria-hidden="true" />
+          Add order
+        </button>
+      )}
 
       {viewingOrder && selectedTable && (
         <OrderDetailsModal

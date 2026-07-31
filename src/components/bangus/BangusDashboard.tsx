@@ -262,7 +262,7 @@ export function BangusDashboard({
     <>
       <nav
         aria-label="Bangus business sections"
-        className="mb-8 flex gap-1 rounded-2xl border border-white/[0.08] bg-white/[0.035] p-1.5"
+        className="mb-3 flex gap-1 rounded-xl border border-white/[0.08] bg-white/[0.035] p-1 sm:mb-8 sm:w-fit sm:rounded-2xl sm:p-1.5"
       >
         {[
           { id: "orders" as const, label: "Orders", icon: FaClipboardList },
@@ -276,7 +276,7 @@ export function BangusDashboard({
               key={tab.id}
               type="button"
               onClick={() => setActiveTab(tab.id)}
-              className={`inline-flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl px-4 text-sm font-semibold transition sm:flex-none ${
+              className={`inline-flex min-h-10 flex-1 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold transition sm:min-h-11 sm:flex-none sm:rounded-xl ${
                 isActive
                   ? "bg-cyan-300 text-[#071211]"
                   : "text-stone-400 hover:bg-white/[0.04] hover:text-white"
@@ -298,7 +298,7 @@ export function BangusDashboard({
         <>
           <section
             aria-label="Catalog summary"
-            className="grid gap-4 sm:grid-cols-3"
+            className="grid grid-cols-3 gap-2 sm:gap-4"
           >
             {[
               {
@@ -327,29 +327,29 @@ export function BangusDashboard({
               return (
                 <article
                   key={card.label}
-                  className="rounded-2xl border border-white/[0.08] bg-white/[0.035] p-5"
+                  className="rounded-xl border border-white/[0.08] bg-white/[0.035] p-3 sm:rounded-2xl sm:p-5"
                 >
                   <div className="flex items-center justify-between">
-                    <p className="text-sm text-stone-400">{card.label}</p>
-                    <Icon aria-hidden="true" className={card.accent} />
+                    <p className="text-[0.65rem] leading-tight text-stone-400 sm:text-sm">{card.label}</p>
+                    <Icon aria-hidden="true" className={`hidden sm:block ${card.accent}`} />
                   </div>
-                  <p className="mt-4 text-3xl font-semibold text-white">
+                  <p className="mt-2 text-lg font-semibold text-white sm:mt-4 sm:text-3xl">
                     {card.value}
                   </p>
-                  <p className="mt-1 text-xs text-stone-600">{card.detail}</p>
+                  <p className="mt-0.5 hidden text-xs text-stone-600 sm:block">{card.detail}</p>
                 </article>
               );
             })}
           </section>
 
-          <section className="mt-8 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111615]">
-            <header className="border-b border-white/[0.08] p-5 sm:p-6">
+          <section className="mt-3 overflow-hidden rounded-xl border border-white/[0.08] bg-[#111615] sm:mt-8 sm:rounded-2xl">
+            <header className="border-b border-white/[0.08] p-3 sm:p-6">
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div>
-                  <h2 className="text-xl font-semibold text-white">
+                  <h2 className="text-base font-semibold text-white sm:text-xl">
                     Product catalog
                   </h2>
-                  <p className="mt-1 text-sm text-stone-500">
+                  <p className="mt-0.5 text-xs text-stone-500 sm:mt-1 sm:text-sm">
                     {filteredProducts.length} of {products.length} products
                   </p>
                 </div>
@@ -377,8 +377,8 @@ export function BangusDashboard({
                 </div>
               </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-[minmax(16rem,1fr)_auto_auto]">
-                <div className="relative">
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-5 sm:gap-3 md:grid-cols-[minmax(16rem,1fr)_auto_auto]">
+                <div className="relative col-span-2 md:col-span-1">
                   <FaSearch
                     aria-hidden="true"
                     className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
@@ -392,7 +392,7 @@ export function BangusDashboard({
                     value={query}
                     onChange={(event) => setQuery(event.target.value)}
                     placeholder="Search product, size, flavor…"
-                    className="min-h-11 w-full rounded-xl border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15"
+                    className="min-h-10 w-full rounded-lg border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15 sm:min-h-11 sm:rounded-xl"
                   />
                 </div>
 
@@ -401,7 +401,7 @@ export function BangusDashboard({
                   <select
                     value={categoryFilter}
                     onChange={(event) => setCategoryFilter(event.target.value)}
-                    className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-300 outline-none focus:border-cyan-300 md:w-56"
+                    className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-2 text-xs text-stone-300 outline-none focus:border-cyan-300 sm:min-h-11 sm:rounded-xl sm:px-3 sm:text-sm md:w-56"
                   >
                     <option value="ALL">All categories</option>
                     {categories.map((category) => (
@@ -421,7 +421,7 @@ export function BangusDashboard({
                         event.target.value as CatalogStatusFilter
                       )
                     }
-                    className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-300 outline-none focus:border-cyan-300 md:w-36"
+                    className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-2 text-xs text-stone-300 outline-none focus:border-cyan-300 sm:min-h-11 sm:rounded-xl sm:px-3 sm:text-sm md:w-36"
                   >
                     <option value="ALL">All statuses</option>
                     <option value="ACTIVE">Active</option>
@@ -480,16 +480,13 @@ export function BangusDashboard({
                   return (
                     <article
                       key={product.id}
-                      className={`p-5 ${product.isActive ? "" : "opacity-55"}`}
+                      className={`p-3 ${product.isActive ? "" : "opacity-55"}`}
                     >
                       <div className="flex items-start justify-between gap-3">
-                        <div className="flex min-w-0 items-start gap-3">
-                          <span className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-cyan-300/10 text-cyan-300">
-                            <FaFish aria-hidden="true" />
-                          </span>
+                        <div className="flex min-w-0 items-start gap-2">
                           <div className="min-w-0">
-                            <p className="font-medium text-stone-100">{product.name}</p>
-                            <p className="mt-1 text-sm text-stone-400">
+                            <p className="text-sm font-medium leading-tight text-stone-100">{product.name}</p>
+                            <p className="mt-0.5 text-xs text-stone-400">
                               {product.sizePack}
                               {product.flavor ? ` · ${product.flavor}` : ""}
                               {product.pieces ? ` · ${product.pieces}` : ""}
@@ -518,23 +515,23 @@ export function BangusDashboard({
                         </div>
                       </div>
 
-                      <div className="mt-4 flex flex-wrap items-center gap-2">
+                      <div className="mt-2 flex flex-wrap items-center gap-1.5">
                         <span
-                          className={`inline-flex rounded-md border px-2 py-1 text-xs ${
+                          className={`inline-flex rounded-md border px-1.5 py-0.5 text-[0.65rem] ${
                             categoryClasses[product.category] ??
                             "border-stone-300/20 bg-stone-300/10 text-stone-300"
                           }`}
                         >
                           {product.category}
                         </span>
-                        <span className={`inline-flex rounded-md border px-2 py-1 text-xs ${pricing.classes}`}>
+                        <span className={`inline-flex rounded-md border px-1.5 py-0.5 text-[0.65rem] ${pricing.classes}`}>
                           {pricing.label}
                         </span>
                         <button
                           type="button"
                           disabled={isBusy}
                           onClick={() => void toggleProduct(product)}
-                          className={`text-xs font-medium transition hover:underline ${
+                          className={`text-[0.65rem] font-medium transition hover:underline ${
                             product.isActive ? "text-emerald-300" : "text-stone-500"
                           }`}
                         >
@@ -542,22 +539,22 @@ export function BangusDashboard({
                         </button>
                       </div>
 
-                      <dl className="mt-4 grid grid-cols-3 gap-3 rounded-xl bg-black/20 p-3 text-sm">
+                      <dl className="mt-2 grid grid-cols-3 gap-2 rounded-lg bg-black/20 p-2 text-xs">
                         <div>
-                          <dt className="text-xs text-stone-500">Supplier</dt>
-                          <dd className="mt-1 font-medium tabular-nums text-stone-300">
+                          <dt className="text-[0.65rem] text-stone-500">Supplier</dt>
+                          <dd className="font-medium tabular-nums text-stone-300">
                             {formatPeso(product.supplierPrice)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-stone-500">Retail</dt>
-                          <dd className="mt-1 font-medium tabular-nums text-white">
+                          <dt className="text-[0.65rem] text-stone-500">Retail</dt>
+                          <dd className="font-medium tabular-nums text-white">
                             {formatPeso(product.retailPrice)}
                           </dd>
                         </div>
                         <div>
-                          <dt className="text-xs text-stone-500">Markup</dt>
-                          <dd className={`mt-1 font-medium tabular-nums ${product.markup < 0 ? "text-red-300" : "text-emerald-300"}`}>
+                          <dt className="text-[0.65rem] text-stone-500">Markup</dt>
+                          <dd className={`font-medium tabular-nums ${product.markup < 0 ? "text-red-300" : "text-emerald-300"}`}>
                             {product.markup < 0 ? "−" : "+"}
                             {formatPeso(Math.abs(product.markup))}
                           </dd>
