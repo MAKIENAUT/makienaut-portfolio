@@ -1,0 +1,242 @@
+import { getBangusDatabase } from "@/lib/orb-weaver/database";
+import type {
+  BangusDeliveryTableRecord,
+  BangusOrderInput,
+  BangusOrderItemRecord,
+  BangusOrderRecord,
+  BangusPaymentMethod,
+} from "@/types/bangus";
+
+const orderInclude = {
+  items: {
+    orderBy: { createdAt: "asc" as const },
+  },
+};
+
+const deliveryTableInclude = {
+  orders: {
+    include: orderInclude,
+    orderBy: [{ sortOrder: "asc" as const }, { createdAt: "asc" as const }],
+  },
+};
+
+interface StoredOrderItem {
+  productId: string;
+  quantity: number;
+  supplierUnitPrice: number;
+  retailUnitPrice: number;
+}
+
+interface StoredOrder {
+  id: string;
+  customerName: string;
+  received: boolean;
+  paid: boolean;
+  paymentMethod: BangusPaymentMethod | null;
+  items: StoredOrderItem[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface StoredDeliveryTable {
+  id: string;
+  deliveryDate: Date;
+  orders: StoredOrder[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+const serializeOrder = (order: StoredOrder): BangusOrderRecord => {
+  const items: BangusOrderItemRecord[] = order.items.map((item) => ({
+    productId: item.productId,
+    quantity: item.quantity,
+    supplierUnitPrice: item.supplierUnitPrice,
+    retailUnitPrice: item.retailUnitPrice,
+  }));
+
+  return {
+    id: order.id,
+    customerName: order.customerName,
+    received: order.received,
+    paid: order.paid,
+    paymentMethod: order.paymentMethod,
+    items,
+    supplierTotal: items.reduce(
+      (total, item) => total + item.quantity * item.supplierUnitPrice,
+      0
+    ),
+    retailTotal: items.reduce(
+      (total, item) => total + item.quantity * item.retailUnitPrice,
+      0
+    ),
+    createdAt: order.createdAt.toISOString(),
+    updatedAt: order.updatedAt.toISOString(),
+  };
+};
+
+const serializeDeliveryTable = (
+  table: StoredDeliveryTable
+): BangusDeliveryTableRecord => ({
+  id: table.id,
+  deliveryDate: table.deliveryDate.toISOString().slice(0, 10),
+  orders: table.orders.map(serializeOrder),
+  createdAt: table.createdAt.toISOString(),
+  updatedAt: table.updatedAt.toISOString(),
+});
+
+const buildOrderItems = async (
+  quantities: Record<string, number>,
+  database = getBangusDatabase()
+) => {
+  const selectedQuantities = Object.entries(quantities).filter(
+    ([, quantity]) => quantity > 0
+  );
+  const productIds = selectedQuantities.map(([productId]) => productId);
+  const products = await database.bangusProduct.findMany({
+    where: { id: { in: productIds } },
+    select: {
+      id: true,
+      supplierPrice: true,
+      retailPrice: true,
+    },
+  });
+
+  if (products.length !== productIds.length) {
+    throw new Error("INVALID_PRODUCTS");
+  }
+
+  const productById = new Map(
+    products.map((product) => [product.id, product])
+  );
+
+  return selectedQuantities.map(([productId, quantity]) => {
+    const product = productById.get(productId);
+    if (!product) throw new Error("INVALID_PRODUCTS");
+
+    return {
+      productId,
+      quantity,
+      supplierUnitPrice: product.supplierPrice,
+      retailUnitPrice: product.retailPrice,
+    };
+  });
+};
+
+export const listBangusDeliveryTables = async () => {
+  const database = getBangusDatabase();
+  const tables = await database.bangusDeliveryTable.findMany({
+    include: deliveryTableInclude,
+    orderBy: { deliveryDate: "desc" },
+  });
+
+  return tables.map((table) =>
+    serializeDeliveryTable(table as unknown as StoredDeliveryTable)
+  );
+};
+
+export const createBangusDeliveryTable = async (deliveryDate: string) => {
+  const database = getBangusDatabase();
+  const table = await database.bangusDeliveryTable.create({
+    data: {
+      deliveryDate: new Date(`${deliveryDate}T00:00:00.000Z`),
+    },
+    include: deliveryTableInclude,
+  });
+
+  return serializeDeliveryTable(table as unknown as StoredDeliveryTable);
+};
+
+export const deleteBangusDeliveryTable = async (id: string) => {
+  const database = getBangusDatabase();
+  await database.bangusDeliveryTable.delete({ where: { id } });
+};
+
+export const createBangusOrder = async (
+  deliveryTableId: string,
+  input: BangusOrderInput
+) => {
+  const database = getBangusDatabase();
+
+  const order = await database.$transaction(async (transaction) => {
+    const [items, lastOrder] = await Promise.all([
+      buildOrderItems(input.quantities, transaction as typeof database),
+      transaction.bangusOrder.findFirst({
+        where: { deliveryTableId },
+        orderBy: { sortOrder: "desc" },
+        select: { sortOrder: true },
+      }),
+    ]);
+
+    return transaction.bangusOrder.create({
+      data: {
+        deliveryTableId,
+        customerName: input.customerName,
+        received: input.received,
+        paid: input.paid,
+        paymentMethod: input.paymentMethod,
+        sortOrder: (lastOrder?.sortOrder ?? 0) + 10,
+        items: {
+          create: items,
+        },
+      },
+      include: orderInclude,
+    });
+  });
+
+  return serializeOrder(order as unknown as StoredOrder);
+};
+
+export const updateBangusOrder = async (
+  id: string,
+  input: BangusOrderInput
+) => {
+  const database = getBangusDatabase();
+
+  const order = await database.$transaction(async (transaction) => {
+    const items = await buildOrderItems(
+      input.quantities,
+      transaction as typeof database
+    );
+
+    await transaction.bangusOrderItem.deleteMany({ where: { orderId: id } });
+
+    return transaction.bangusOrder.update({
+      where: { id },
+      data: {
+        customerName: input.customerName,
+        received: input.received,
+        paid: input.paid,
+        paymentMethod: input.paymentMethod,
+        items: {
+          create: items,
+        },
+      },
+      include: orderInclude,
+    });
+  });
+
+  return serializeOrder(order as unknown as StoredOrder);
+};
+
+export const updateBangusOrderStatus = async (
+  id: string,
+  status: {
+    received: boolean;
+    paid: boolean;
+    paymentMethod: BangusPaymentMethod | null;
+  }
+) => {
+  const database = getBangusDatabase();
+  const order = await database.bangusOrder.update({
+    where: { id },
+    data: status,
+    include: orderInclude,
+  });
+
+  return serializeOrder(order as unknown as StoredOrder);
+};
+
+export const deleteBangusOrder = async (id: string) => {
+  const database = getBangusDatabase();
+  await database.bangusOrder.delete({ where: { id } });
+};

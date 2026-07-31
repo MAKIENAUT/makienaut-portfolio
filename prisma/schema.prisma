@@ -16,6 +16,12 @@ enum AppointmentStatus {
   CANCELLED
 }
 
+enum BangusPaymentMethod {
+  GCASH
+  CASH
+  BANK
+}
+
 model OrbWeaverAppointment {
   id                 String            @id @default(uuid()) @db.Uuid
   publicReference    String?           @unique @db.VarChar(16)
@@ -59,4 +65,82 @@ model OrbWeaverLoginAttempt {
 
   @@index([sourceFingerprint, createdAt])
   @@map("orb_weaver_login_attempts")
+}
+
+model BangusProductCategory {
+  id        String          @id @default(uuid()) @db.Uuid
+  name      String          @unique @db.VarChar(80)
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now()) @db.Timestamptz(3)
+  updatedAt DateTime        @updatedAt @db.Timestamptz(3)
+  products  BangusProduct[]
+
+  @@index([sortOrder, name])
+  @@map("bangus_product_categories")
+}
+
+model BangusProduct {
+  id            String                @id @default(uuid()) @db.Uuid
+  name          String                @db.VarChar(120)
+  supplierPrice Int
+  retailPrice   Int
+  categoryId    String                @db.Uuid
+  category      BangusProductCategory @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  sizePack      String                @db.VarChar(60)
+  flavor        String?               @db.VarChar(60)
+  pieces        String?               @db.VarChar(60)
+  isActive      Boolean               @default(true)
+  sortOrder     Int                   @default(0)
+  createdAt     DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt     DateTime              @updatedAt @db.Timestamptz(3)
+  orderItems    BangusOrderItem[]
+
+  @@index([isActive, sortOrder])
+  @@index([categoryId, sortOrder])
+  @@map("bangus_products")
+}
+
+model BangusDeliveryTable {
+  id           String        @id @default(uuid()) @db.Uuid
+  deliveryDate DateTime      @unique @db.Date
+  createdAt    DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
+  orders       BangusOrder[]
+
+  @@index([deliveryDate])
+  @@map("bangus_delivery_tables")
+}
+
+model BangusOrder {
+  id              String                @id @default(uuid()) @db.Uuid
+  deliveryTableId String                @db.Uuid
+  deliveryTable   BangusDeliveryTable   @relation(fields: [deliveryTableId], references: [id], onDelete: Cascade)
+  customerName    String                @db.VarChar(120)
+  received        Boolean               @default(false)
+  paid            Boolean               @default(false)
+  paymentMethod   BangusPaymentMethod?
+  sortOrder       Int                   @default(0)
+  createdAt       DateTime              @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime              @updatedAt @db.Timestamptz(3)
+  items           BangusOrderItem[]
+
+  @@index([deliveryTableId, sortOrder])
+  @@map("bangus_orders")
+}
+
+model BangusOrderItem {
+  id                String        @id @default(uuid()) @db.Uuid
+  orderId           String        @db.Uuid
+  order             BangusOrder   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId         String        @db.Uuid
+  product           BangusProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
+  quantity          Int
+  supplierUnitPrice Int
+  retailUnitPrice   Int
+  createdAt         DateTime      @default(now()) @db.Timestamptz(3)
+  updatedAt         DateTime      @updatedAt @db.Timestamptz(3)
+
+  @@unique([orderId, productId])
+  @@index([productId])
+  @@map("bangus_order_items")
 }

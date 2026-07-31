@@ -119,6 +119,30 @@ body::before {
   background: #78716c;
 }
 
+.bangus-order-grid {
+  scrollbar-color: #4f7375 #171c1a;
+  scrollbar-width: thin;
+}
+
+.bangus-order-grid::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.bangus-order-grid::-webkit-scrollbar-track {
+  background: #171c1a;
+}
+
+.bangus-order-grid::-webkit-scrollbar-thumb {
+  border: 2px solid #171c1a;
+  border-radius: 999px;
+  background: #4f7375;
+}
+
+.bangus-order-grid::-webkit-scrollbar-thumb:hover {
+  background: #67a4a7;
+}
+
 .orb-weaver-page .leaflet-container {
   background: #171915;
   color: #1c1917;

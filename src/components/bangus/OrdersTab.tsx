@@ -1,0 +1,971 @@
+"use client";
+
+import { FormEvent, useCallback, useMemo, useState } from "react";
+import {
+  FaCalendarAlt,
+  FaEdit,
+  FaFileDownload,
+  FaPlus,
+  FaSyncAlt,
+  FaTrash,
+  FaTruck,
+} from "react-icons/fa";
+import { OrderDetailsModal } from "@/components/bangus/OrderDetailsModal";
+import { OrderFormModal } from "@/components/bangus/OrderFormModal";
+import {
+  getBangusProductAbbreviation,
+  getBangusProductFullLabel,
+} from "@/lib/bangus/product-label";
+import { generateBangusSupplierOrderMarkdown } from "@/lib/bangus/supplier-order-markdown";
+import {
+  BANGUS_PAYMENT_METHODS,
+  type BangusDeliveryTableRecord,
+  type BangusOrderInput,
+  type BangusOrderRecord,
+  type BangusPaymentMethod,
+  type BangusProductRecord,
+} from "@/types/bangus";
+
+interface OrdersTabProps {
+  products: BangusProductRecord[];
+  initialDeliveryTables: BangusDeliveryTableRecord[];
+}
+
+const paymentLabels: Record<BangusPaymentMethod, string> = {
+  GCASH: "GCash",
+  CASH: "Cash",
+  BANK: "Bank",
+};
+
+const formatPeso = (value: number) =>
+  new Intl.NumberFormat("en-PH", {
+    style: "currency",
+    currency: "PHP",
+    maximumFractionDigits: 0,
+  }).format(value);
+
+const formatDeliveryDate = (value: string, includeWeekday = true) =>
+  new Intl.DateTimeFormat("en-PH", {
+    timeZone: "UTC",
+    ...(includeWeekday ? { weekday: "long" as const } : {}),
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(`${value}T00:00:00.000Z`));
+
+const getManilaDate = () => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: "Asia/Manila",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const getPart = (type: string) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  return `${getPart("year")}-${getPart("month")}-${getPart("day")}`;
+};
+
+export function OrdersTab({
+  products,
+  initialDeliveryTables,
+}: OrdersTabProps) {
+  const [deliveryTables, setDeliveryTables] = useState(initialDeliveryTables);
+  const [selectedTableId, setSelectedTableId] = useState(
+    initialDeliveryTables[0]?.id ?? ""
+  );
+  const [newDeliveryDate, setNewDeliveryDate] = useState(getManilaDate);
+  const [showDateForm, setShowDateForm] = useState(
+    initialDeliveryTables.length === 0
+  );
+  const [isCreatingTable, setIsCreatingTable] = useState(false);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [busyOrderId, setBusyOrderId] = useState<string>();
+  const [error, setError] = useState("");
+  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+  const [editingOrder, setEditingOrder] = useState<BangusOrderRecord | null>(
+    null
+  );
+  const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
+
+  const selectedTable =
+    deliveryTables.find((table) => table.id === selectedTableId) ??
+    deliveryTables[0] ??
+    null;
+  const viewingOrder =
+    selectedTable?.orders.find((order) => order.id === viewingOrderId) ?? null;
+
+  const productColumns = products;
+
+  const tableTotals = useMemo(() => {
+    const orders = selectedTable?.orders ?? [];
+    return {
+      retail: orders.reduce((total, order) => total + order.retailTotal, 0),
+      supplier: orders.reduce((total, order) => total + order.supplierTotal, 0),
+      paid: orders.filter((order) => order.paid).length,
+      received: orders.filter((order) => order.received).length,
+    };
+  }, [selectedTable]);
+
+  const replaceOrder = useCallback(
+    (updatedOrder: BangusOrderRecord) => {
+      if (!selectedTable) return;
+      setDeliveryTables((current) =>
+        current.map((table) =>
+          table.id === selectedTable.id
+            ? {
+                ...table,
+                orders: table.orders.map((order) =>
+                  order.id === updatedOrder.id ? updatedOrder : order
+                ),
+              }
+            : table
+        )
+      );
+    },
+    [selectedTable]
+  );
+
+  const refreshTables = useCallback(async () => {
+    setIsRefreshing(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/bangus/backoffice/delivery-tables",
+        { cache: "no-store" }
+      );
+      const result = (await response.json()) as {
+        deliveryTables?: BangusDeliveryTableRecord[];
+        message?: string;
+      };
+      if (!response.ok || !result.deliveryTables) {
+        throw new Error(
+          result.message || "Delivery tables could not be refreshed."
+        );
+      }
+
+      setDeliveryTables(result.deliveryTables);
+      setSelectedTableId((current) =>
+        result.deliveryTables!.some((table) => table.id === current)
+          ? current
+          : result.deliveryTables![0]?.id ?? ""
+      );
+    } catch (refreshError) {
+      setError(
+        refreshError instanceof Error
+          ? refreshError.message
+          : "Delivery tables could not be refreshed."
+      );
+    } finally {
+      setIsRefreshing(false);
+    }
+  }, []);
+
+  const createDeliveryTable = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setIsCreatingTable(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        "/api/bangus/backoffice/delivery-tables",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ deliveryDate: newDeliveryDate }),
+        }
+      );
+      const result = (await response.json()) as {
+        deliveryTable?: BangusDeliveryTableRecord;
+        message?: string;
+      };
+      if (!response.ok || !result.deliveryTable) {
+        throw new Error(result.message || "Delivery table could not be created.");
+      }
+
+      setDeliveryTables((current) =>
+        [...current, result.deliveryTable!].sort((a, b) =>
+          b.deliveryDate.localeCompare(a.deliveryDate)
+        )
+      );
+      setSelectedTableId(result.deliveryTable.id);
+      setShowDateForm(false);
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : "Delivery table could not be created."
+      );
+    } finally {
+      setIsCreatingTable(false);
+    }
+  };
+
+  const deleteDeliveryTable = async () => {
+    if (
+      !selectedTable ||
+      !window.confirm(
+        `Remove the ${formatDeliveryDate(
+          selectedTable.deliveryDate,
+          false
+        )} table and all ${selectedTable.orders.length} orders in it?`
+      )
+    ) {
+      return;
+    }
+
+    setError("");
+    try {
+      const response = await fetch(
+        `/api/bangus/backoffice/delivery-tables/${selectedTable.id}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(result?.message || "Delivery table could not be removed.");
+      }
+
+      setDeliveryTables((current) => {
+        const next = current.filter((table) => table.id !== selectedTable.id);
+        setSelectedTableId(next[0]?.id ?? "");
+        return next;
+      });
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Delivery table could not be removed."
+      );
+    }
+  };
+
+  const saveOrder = async (input: BangusOrderInput) => {
+    if (!selectedTable) throw new Error("Choose a delivery table first.");
+
+    const endpoint = editingOrder
+      ? `/api/bangus/backoffice/orders/${editingOrder.id}`
+      : `/api/bangus/backoffice/delivery-tables/${selectedTable.id}/orders`;
+    const response = await fetch(endpoint, {
+      method: editingOrder ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    });
+    const result = (await response.json()) as {
+      order?: BangusOrderRecord;
+      message?: string;
+    };
+    if (!response.ok || !result.order) {
+      throw new Error(result.message || "Order could not be saved.");
+    }
+
+    setDeliveryTables((current) =>
+      current.map((table) =>
+        table.id === selectedTable.id
+          ? {
+              ...table,
+              orders: editingOrder
+                ? table.orders.map((order) =>
+                    order.id === result.order!.id ? result.order! : order
+                  )
+                : [...table.orders, result.order!],
+            }
+          : table
+      )
+    );
+  };
+
+  const updateStatus = async (
+    order: BangusOrderRecord,
+    changes: Partial<
+      Pick<BangusOrderRecord, "received" | "paid" | "paymentMethod">
+    >
+  ) => {
+    setBusyOrderId(order.id);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/bangus/backoffice/orders/${order.id}`,
+        {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            received: changes.received ?? order.received,
+            paid: changes.paid ?? order.paid,
+            paymentMethod:
+              changes.paymentMethod === undefined
+                ? order.paymentMethod
+                : changes.paymentMethod,
+          }),
+        }
+      );
+      const result = (await response.json()) as {
+        order?: BangusOrderRecord;
+        message?: string;
+      };
+      if (!response.ok || !result.order) {
+        throw new Error(result.message || "Order status could not be updated.");
+      }
+      replaceOrder(result.order);
+    } catch (updateError) {
+      setError(
+        updateError instanceof Error
+          ? updateError.message
+          : "Order status could not be updated."
+      );
+    } finally {
+      setBusyOrderId(undefined);
+    }
+  };
+
+  const deleteOrder = async (order: BangusOrderRecord) => {
+    if (!selectedTable || !window.confirm(`Remove ${order.customerName}'s order?`)) {
+      return;
+    }
+    setBusyOrderId(order.id);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/bangus/backoffice/orders/${order.id}`,
+        { method: "DELETE" }
+      );
+      if (!response.ok) {
+        const result = (await response.json().catch(() => null)) as {
+          message?: string;
+        } | null;
+        throw new Error(result?.message || "Order could not be removed.");
+      }
+      setDeliveryTables((current) =>
+        current.map((table) =>
+          table.id === selectedTable.id
+            ? {
+                ...table,
+                orders: table.orders.filter((item) => item.id !== order.id),
+              }
+            : table
+        )
+      );
+      if (viewingOrderId === order.id) setViewingOrderId(null);
+    } catch (deleteError) {
+      setError(
+        deleteError instanceof Error
+          ? deleteError.message
+          : "Order could not be removed."
+      );
+    } finally {
+      setBusyOrderId(undefined);
+    }
+  };
+
+  const openNewOrder = () => {
+    setEditingOrder(null);
+    setIsOrderFormOpen(true);
+  };
+
+  const openEditOrder = (order: BangusOrderRecord) => {
+    setEditingOrder(order);
+    setIsOrderFormOpen(true);
+  };
+
+  const exportSupplierOrder = () => {
+    if (!selectedTable || selectedTable.orders.length === 0) return;
+
+    const markdown = generateBangusSupplierOrderMarkdown(
+      selectedTable,
+      products
+    );
+    const file = new Blob([markdown], {
+      type: "text/markdown;charset=utf-8",
+    });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `bangus-supplier-order-${selectedTable.deliveryDate}.md`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1_000);
+  };
+
+  return (
+    <>
+      <section className="min-w-0 overflow-hidden rounded-2xl border border-white/[0.08] bg-[#111615]">
+        <header className="border-b border-white/[0.08] p-5 sm:p-6">
+          <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-300">
+                Delivery tables
+              </p>
+              <h2 className="mt-2 text-xl font-semibold text-white">
+                {selectedTable
+                  ? formatDeliveryDate(selectedTable.deliveryDate)
+                  : "Create your first delivery table"}
+              </h2>
+              <p className="mt-1 text-sm text-stone-500">
+                {selectedTable
+                  ? `${selectedTable.orders.length} customer ${
+                      selectedTable.orders.length === 1 ? "order" : "orders"
+                    }`
+                  : "Each table is named using its delivery date."}
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row">
+              {deliveryTables.length > 0 && (
+                <label>
+                  <span className="sr-only">Choose delivery table</span>
+                  <select
+                    value={selectedTable?.id ?? ""}
+                    onChange={(event) => {
+                      setSelectedTableId(event.target.value);
+                      setViewingOrderId(null);
+                    }}
+                    className="min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:w-64"
+                  >
+                    {deliveryTables.map((table) => (
+                      <option key={table.id} value={table.id}>
+                        {formatDeliveryDate(table.deliveryDate, false)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              )}
+              <button
+                type="button"
+                disabled={isRefreshing}
+                onClick={() => void refreshTables()}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 disabled:cursor-wait disabled:opacity-60"
+              >
+                <FaSyncAlt
+                  aria-hidden="true"
+                  className={isRefreshing ? "animate-spin" : ""}
+                />
+                <span className="sr-only sm:not-sr-only">Refresh</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowDateForm((current) => !current)}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-cyan-300/30 px-4 text-sm font-semibold text-cyan-200 transition hover:bg-cyan-300/10"
+              >
+                <FaCalendarAlt aria-hidden="true" />
+                New date table
+              </button>
+              {selectedTable && (
+                <>
+                  <button
+                    type="button"
+                    disabled={selectedTable.orders.length === 0}
+                    onClick={exportSupplierOrder}
+                    title="Download the supplier order as Markdown"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-emerald-300/30 px-4 text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <FaFileDownload aria-hidden="true" />
+                    Supplier Order
+                  </button>
+                  <button
+                    type="button"
+                    onClick={openNewOrder}
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-4 text-sm font-bold text-[#071211] transition hover:bg-cyan-200"
+                  >
+                    <FaPlus aria-hidden="true" />
+                    Add order
+                  </button>
+                </>
+              )}
+            </div>
+          </div>
+
+          {showDateForm && (
+            <form
+              onSubmit={createDeliveryTable}
+              className="mt-5 flex flex-col gap-3 rounded-xl border border-cyan-300/15 bg-cyan-300/[0.04] p-4 sm:flex-row sm:items-end"
+            >
+              <label className="flex-1">
+                <span className="text-sm font-medium text-stone-300">
+                  Delivery date
+                </span>
+                <input
+                  required
+                  type="date"
+                  value={newDeliveryDate}
+                  onChange={(event) => setNewDeliveryDate(event.target.value)}
+                  className="mt-2 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none focus:border-cyan-300"
+                />
+              </label>
+              <button
+                type="submit"
+                disabled={isCreatingTable}
+                className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60"
+              >
+                <FaPlus aria-hidden="true" />
+                {isCreatingTable ? "Creating…" : "Create table"}
+              </button>
+              {deliveryTables.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setShowDateForm(false)}
+                  className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-stone-400 transition hover:text-white"
+                >
+                  Cancel
+                </button>
+              )}
+            </form>
+          )}
+
+          {error && (
+            <p
+              role="alert"
+              className="mt-4 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-100"
+            >
+              {error}
+            </p>
+          )}
+        </header>
+
+        {!selectedTable ? (
+          <div className="px-5 py-16 text-center">
+            <FaTruck
+              aria-hidden="true"
+              className="mx-auto text-4xl text-stone-700"
+            />
+            <p className="mt-4 font-medium text-stone-300">
+              No delivery tables yet.
+            </p>
+            <p className="mt-1 text-sm text-stone-600">
+              Pick a delivery date above to start taking orders.
+            </p>
+          </div>
+        ) : (
+          <>
+            <section
+              aria-label="Delivery table summary"
+              className="grid grid-cols-2 gap-px border-b border-white/[0.08] bg-white/[0.08] lg:grid-cols-4"
+            >
+              {[
+                {
+                  label: "Retail total",
+                  value: formatPeso(tableTotals.retail),
+                  classes: "text-emerald-300",
+                },
+                {
+                  label: "Supplier total",
+                  value: formatPeso(tableTotals.supplier),
+                  classes: "text-stone-200",
+                },
+                {
+                  label: "Paid",
+                  value: `${tableTotals.paid}/${selectedTable.orders.length}`,
+                  classes: "text-cyan-300",
+                },
+                {
+                  label: "Received",
+                  value: `${tableTotals.received}/${selectedTable.orders.length}`,
+                  classes: "text-violet-300",
+                },
+              ].map((item) => (
+                <article key={item.label} className="bg-[#101412] p-4 sm:px-6">
+                  <p className="text-xs text-stone-500">{item.label}</p>
+                  <p className={`mt-1 text-xl font-semibold ${item.classes}`}>
+                    {item.value}
+                  </p>
+                </article>
+              ))}
+            </section>
+
+            {selectedTable.orders.length === 0 ? (
+              <div className="px-5 py-16 text-center">
+                <FaTruck
+                  aria-hidden="true"
+                  className="mx-auto text-4xl text-stone-700"
+                />
+                <p className="mt-4 font-medium text-stone-300">
+                  This delivery table has no orders.
+                </p>
+                <button
+                  type="button"
+                  onClick={openNewOrder}
+                  className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200"
+                >
+                  <FaPlus aria-hidden="true" />
+                  Add the first order
+                </button>
+              </div>
+            ) : (
+              <>
+              <div className="divide-y divide-white/[0.08] md:hidden">
+                {selectedTable.orders.map((order) => {
+                  const isBusy = busyOrderId === order.id;
+                  const orderedItems = order.items.filter(
+                    (item) => item.quantity > 0
+                  );
+
+                  return (
+                    <article key={order.id} className="p-5">
+                      <div className="flex items-start justify-between gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setViewingOrderId(order.id)}
+                          className="min-w-0 text-left text-base font-semibold text-white underline-offset-4 transition hover:text-cyan-200 hover:underline focus-visible:text-cyan-200"
+                        >
+                          {order.customerName}
+                        </button>
+                        <div className="flex shrink-0 gap-1">
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => openEditOrder(order)}
+                            aria-label={`Edit ${order.customerName}'s order`}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
+                          >
+                            <FaEdit aria-hidden="true" />
+                          </button>
+                          <button
+                            type="button"
+                            disabled={isBusy}
+                            onClick={() => void deleteOrder(order)}
+                            aria-label={`Remove ${order.customerName}'s order`}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl text-stone-500 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
+                          >
+                            <FaTrash aria-hidden="true" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 rounded-xl bg-black/20 p-3 text-sm">
+                        <div>
+                          <p className="text-xs text-stone-500">Retail total</p>
+                          <p className="mt-1 font-semibold tabular-nums text-emerald-300">
+                            {formatPeso(order.retailTotal)}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-stone-500">Supplier total</p>
+                          <p className="mt-1 font-semibold tabular-nums text-stone-200">
+                            {formatPeso(order.supplierTotal)}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3">
+                        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 text-sm text-stone-200">
+                          <input
+                            type="checkbox"
+                            checked={order.received}
+                            disabled={isBusy}
+                            onChange={(event) =>
+                              void updateStatus(order, {
+                                received: event.target.checked,
+                              })
+                            }
+                            className="h-4 w-4 accent-cyan-300"
+                          />
+                          Received
+                        </label>
+                        <label className="flex min-h-11 cursor-pointer items-center gap-3 rounded-xl border border-white/10 px-3 text-sm text-stone-200">
+                          <input
+                            type="checkbox"
+                            checked={order.paid}
+                            disabled={isBusy}
+                            onChange={(event) =>
+                              void updateStatus(order, { paid: event.target.checked })
+                            }
+                            className="h-4 w-4 accent-cyan-300"
+                          />
+                          Paid
+                        </label>
+                      </div>
+
+                      <label className="mt-3 block">
+                        <span className="text-xs text-stone-500">Payment method</span>
+                        <select
+                          value={order.paymentMethod ?? ""}
+                          disabled={isBusy}
+                          onChange={(event) =>
+                            void updateStatus(order, {
+                              paymentMethod:
+                                (event.target.value as BangusPaymentMethod) || null,
+                            })
+                          }
+                          className="mt-1 min-h-11 w-full rounded-xl border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 disabled:opacity-50"
+                        >
+                          <option value="">Not set</option>
+                          {BANGUS_PAYMENT_METHODS.map((method) => (
+                            <option key={method} value={method}>
+                              {paymentLabels[method]}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+
+                      <div className="mt-4">
+                        <p className="text-xs font-medium uppercase tracking-[0.08em] text-stone-500">
+                          Items
+                        </p>
+                        {orderedItems.length > 0 ? (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {orderedItems.map((item) => {
+                              const product = productColumns.find(
+                                (candidate) => candidate.id === item.productId
+                              );
+
+                              return (
+                                <span
+                                  key={item.productId}
+                                  className="rounded-lg border border-cyan-300/15 bg-cyan-300/[0.06] px-2.5 py-1.5 text-xs text-cyan-100"
+                                >
+                                  {item.quantity} × {product
+                                    ? getBangusProductFullLabel(product)
+                                    : "Unavailable product"}
+                                </span>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="mt-2 text-sm text-stone-500">No items added.</p>
+                        )}
+                      </div>
+                    </article>
+                  );
+                })}
+              </div>
+
+              <div className="bangus-order-grid hidden max-h-[65svh] max-w-full overflow-auto overscroll-contain md:block">
+                <table className="w-max min-w-full border-collapse text-left text-sm">
+                  <thead>
+                    <tr className="border-b border-white/[0.08] bg-black/25 text-[0.68rem] uppercase tracking-[0.07em] text-stone-500">
+                      <th className="sticky left-0 top-0 z-30 min-w-56 border-r border-white/[0.08] bg-[#0d100f] px-5 py-4 font-semibold">
+                        Orders
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
+                        Retail price
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
+                        Supplier price
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-24 bg-[#0d100f] px-4 py-4 text-center font-semibold">
+                        Received
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-20 bg-[#0d100f] px-4 py-4 text-center font-semibold">
+                        Paid
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-36 border-r border-white/[0.08] bg-[#0d100f] px-4 py-4 font-semibold">
+                        Payment method
+                      </th>
+                      {productColumns.map((product) => (
+                        <th
+                          key={product.id}
+                          title={getBangusProductFullLabel(product)}
+                          className="sticky top-0 z-20 min-w-24 border-r border-white/[0.06] bg-[#0d100f] px-2 py-4 text-center font-semibold text-cyan-200"
+                        >
+                          {getBangusProductAbbreviation(product)}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-white/[0.06]">
+                    {selectedTable.orders.map((order) => {
+                      const itemByProductId = new Map(
+                        order.items.map((item) => [item.productId, item])
+                      );
+                      const isBusy = busyOrderId === order.id;
+
+                      return (
+                        <tr
+                          key={order.id}
+                          className="transition hover:bg-white/[0.025]"
+                        >
+                          <td className="sticky left-0 z-10 border-r border-white/[0.08] bg-[#111615] px-5 py-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setViewingOrderId(order.id)}
+                                className="min-w-0 text-left font-medium text-stone-100 underline-offset-4 transition hover:text-cyan-200 hover:underline focus-visible:text-cyan-200"
+                              >
+                                {order.customerName}
+                              </button>
+                              <div className="flex shrink-0">
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => openEditOrder(order)}
+                                  aria-label={`Edit ${order.customerName}'s order`}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
+                                >
+                                  <FaEdit aria-hidden="true" />
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={isBusy}
+                                  onClick={() => void deleteOrder(order)}
+                                  aria-label={`Remove ${order.customerName}'s order`}
+                                  className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
+                                >
+                                  <FaTrash aria-hidden="true" />
+                                </button>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-300">
+                            {formatPeso(order.retailTotal)}
+                          </td>
+                          <td className="px-4 py-3 text-right tabular-nums text-stone-400">
+                            {formatPeso(order.supplierTotal)}
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <label className="inline-flex cursor-pointer items-center">
+                              <span className="sr-only">
+                                {order.customerName} received
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={order.received}
+                                disabled={isBusy}
+                                onChange={(event) =>
+                                  void updateStatus(order, {
+                                    received: event.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 accent-cyan-300"
+                              />
+                            </label>
+                          </td>
+                          <td className="px-4 py-3 text-center">
+                            <label className="inline-flex cursor-pointer items-center">
+                              <span className="sr-only">
+                                {order.customerName} paid
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={order.paid}
+                                disabled={isBusy}
+                                onChange={(event) =>
+                                  void updateStatus(order, {
+                                    paid: event.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 accent-cyan-300"
+                              />
+                            </label>
+                          </td>
+                          <td className="border-r border-white/[0.08] px-4 py-3">
+                            <select
+                              value={order.paymentMethod ?? ""}
+                              disabled={isBusy}
+                              onChange={(event) =>
+                                void updateStatus(order, {
+                                  paymentMethod:
+                                    (event.target
+                                      .value as BangusPaymentMethod) || null,
+                                })
+                              }
+                              aria-label={`${order.customerName} payment method`}
+                              className="min-h-9 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-2 text-xs text-stone-300 outline-none focus:border-cyan-300 disabled:opacity-50"
+                            >
+                              <option value="">Not set</option>
+                              {BANGUS_PAYMENT_METHODS.map((method) => (
+                                <option key={method} value={method}>
+                                  {paymentLabels[method]}
+                                </option>
+                              ))}
+                            </select>
+                          </td>
+                          {productColumns.map((product) => (
+                            <td
+                              key={product.id}
+                              className="border-r border-white/[0.05] px-3 py-3 text-center font-medium tabular-nums text-stone-300"
+                            >
+                              {itemByProductId.get(product.id)?.quantity || "—"}
+                            </td>
+                          ))}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                  <tfoot>
+                    <tr className="border-t border-white/[0.1] bg-black/20 font-semibold">
+                      <th className="sticky left-0 z-10 border-r border-white/[0.08] bg-[#0d100f] px-5 py-4 text-xs uppercase tracking-[0.08em] text-stone-400">
+                        Totals
+                      </th>
+                      <td className="px-4 py-4 text-right tabular-nums text-emerald-300">
+                        {formatPeso(tableTotals.retail)}
+                      </td>
+                      <td className="px-4 py-4 text-right tabular-nums text-stone-300">
+                        {formatPeso(tableTotals.supplier)}
+                      </td>
+                      <td className="px-4 py-4 text-center text-cyan-200">
+                        {tableTotals.received}
+                      </td>
+                      <td className="px-4 py-4 text-center text-cyan-200">
+                        {tableTotals.paid}
+                      </td>
+                      <td className="border-r border-white/[0.08] px-4 py-4 text-stone-600">
+                        —
+                      </td>
+                      {productColumns.map((product) => (
+                        <td
+                          key={product.id}
+                          className="border-r border-white/[0.05] px-3 py-4 text-center tabular-nums text-cyan-200"
+                        >
+                          {selectedTable.orders.reduce(
+                            (total, order) =>
+                              total +
+                              (order.items.find(
+                                (item) => item.productId === product.id
+                              )?.quantity ?? 0),
+                            0
+                          )}
+                        </td>
+                      ))}
+                    </tr>
+                  </tfoot>
+                </table>
+              </div>
+              </>
+            )}
+
+            <footer className="flex flex-col gap-3 border-t border-white/[0.08] px-5 py-4 sm:flex-row sm:items-center sm:justify-between sm:px-6">
+              <p className="text-xs text-stone-600">
+                Product headings are abbreviated. Hover over one to see its
+                full catalog name.
+              </p>
+              <button
+                type="button"
+                onClick={() => void deleteDeliveryTable()}
+                className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold text-stone-600 transition hover:bg-red-300/10 hover:text-red-200"
+              >
+                <FaTrash aria-hidden="true" />
+                Delete this date table
+              </button>
+            </footer>
+          </>
+        )}
+      </section>
+
+      {viewingOrder && selectedTable && (
+        <OrderDetailsModal
+          deliveryDate={selectedTable.deliveryDate}
+          order={viewingOrder}
+          products={products}
+          onClose={() => setViewingOrderId(null)}
+          onEdit={() => {
+            setViewingOrderId(null);
+            openEditOrder(viewingOrder);
+          }}
+        />
+      )}
+
+      {isOrderFormOpen && selectedTable && (
+        <OrderFormModal
+          deliveryDate={selectedTable.deliveryDate}
+          order={editingOrder}
+          products={products}
+          onClose={() => setIsOrderFormOpen(false)}
+          onSave={saveOrder}
+        />
+      )}
+    </>
+  );
+}

@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FaArrowLeft, FaDatabase } from "react-icons/fa";
+import { FaArrowLeft, FaDatabase, FaFish } from "react-icons/fa";
 import { AppointmentsDashboard } from "@/components/orb-weaver/AppointmentsDashboard";
 import { OrbWeaverLogoutButton } from "@/components/orb-weaver/LogoutButton";
 import { listOrbWeaverAppointments } from "@/lib/orb-weaver/appointments";
@@ -59,6 +59,13 @@ export default async function OrbWeaverBackofficePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <Link
+              href="/vroombroom/backoffice/bangus"
+              className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-cyan-300/20 bg-cyan-300/[0.06] px-3 py-2 text-sm font-semibold text-cyan-200 transition hover:border-cyan-300/40 hover:bg-cyan-300/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300"
+            >
+              <FaFish aria-hidden="true" />
+              Bangus
+            </Link>
             <Link
               href="/vroombroom"
               className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-stone-400 transition hover:text-amber-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
