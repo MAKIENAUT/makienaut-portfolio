@@ -67,6 +67,9 @@ const formatDeliveryDate = (value: string, includeWeekday = true) =>
 const formatTableLabel = (table: BangusDeliveryTableRecord) =>
   `${table.name} · ${formatDeliveryDate(table.deliveryDate, false)}`;
 
+const hasOrderShortage = (order: BangusOrderRecord) =>
+  order.items.some((item) => item.shortQuantity > 0);
+
 const getManilaDate = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
@@ -871,6 +874,7 @@ export function OrdersTab({
               <div className="divide-y divide-white/[0.08] md:hidden">
                 {filteredOrders.map((order) => {
                   const isBusy = busyOrderId === order.id;
+                  const hasShortage = hasOrderShortage(order);
                   const orderedItems = order.items.filter(
                     (item) => item.quantity > 0
                   );
@@ -923,7 +927,7 @@ export function OrdersTab({
                       </div>
 
                       <div className={`mt-2 grid gap-1.5 ${isSupplier ? "grid-cols-2" : "grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)]"}`}>
-                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
+                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked && hasShortage ? "border-rose-300/40 bg-rose-300/10 text-rose-100" : order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
                             checked={order.repacked}
@@ -933,9 +937,9 @@ export function OrdersTab({
                                 repacked: event.target.checked,
                               })
                             }
-                            className="h-3.5 w-3.5 accent-amber-300"
+                            className={`h-3.5 w-3.5 ${order.repacked && hasShortage ? "accent-rose-300" : "accent-amber-300"}`}
                           />
-                          Repacked
+                          {order.repacked && hasShortage ? "Repacked · Short" : "Repacked"}
                         </label>
                         <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
                           <input
@@ -988,11 +992,16 @@ export function OrdersTab({
                                 <span
                                   key={item.productId}
                                   title={product ? getBangusProductFullLabel(product) : "Unavailable product"}
-                                  className="shrink-0 rounded-md border border-cyan-300/15 bg-cyan-300/[0.06] px-2 py-1 text-[0.65rem] text-cyan-100"
+                                  className={`shrink-0 rounded-md border px-2 py-1 text-[0.65rem] ${item.shortQuantity > 0 ? "border-rose-300/30 bg-rose-300/10 text-rose-100" : "border-cyan-300/15 bg-cyan-300/[0.06] text-cyan-100"}`}
                                 >
                                   {item.quantity} × {product
                                     ? getBangusProductAbbreviation(product)
                                     : "Unavailable product"}
+                                  {item.shortQuantity > 0 && (
+                                    <span className="ml-1 font-semibold text-rose-200">
+                                      · {item.shortQuantity} short
+                                    </span>
+                                  )}
                                 </span>
                               );
                             })}
@@ -1050,6 +1059,7 @@ export function OrdersTab({
                         order.items.map((item) => [item.productId, item])
                       );
                       const isBusy = busyOrderId === order.id;
+                      const hasShortage = hasOrderShortage(order);
 
                       return (
                         <tr
@@ -1109,7 +1119,12 @@ export function OrdersTab({
                                     repacked: event.target.checked,
                                   })
                                 }
-                                className="h-4 w-4 accent-amber-300"
+                                title={
+                                  order.repacked && hasShortage
+                                    ? "Repacked with short or missing products"
+                                    : undefined
+                                }
+                                className={`h-4 w-4 ${order.repacked && hasShortage ? "accent-rose-300" : "accent-amber-300"}`}
                               />
                             </label>
                           </td>
@@ -1162,14 +1177,29 @@ export function OrdersTab({
                               compact
                             />
                           </td>}
-                          {productColumns.map((product) => (
-                            <td
-                              key={product.id}
-                              className="border-r border-white/[0.05] px-3 py-3 text-center font-medium tabular-nums text-stone-300"
-                            >
-                              {itemByProductId.get(product.id)?.quantity || "—"}
-                            </td>
-                          ))}
+                          {productColumns.map((product) => {
+                            const item = itemByProductId.get(product.id);
+                            const isShort = (item?.shortQuantity ?? 0) > 0;
+
+                            return (
+                              <td
+                                key={product.id}
+                                title={
+                                  isShort
+                                    ? `${item!.shortQuantity} short or missing`
+                                    : undefined
+                                }
+                                className={`border-r border-white/[0.05] px-3 py-3 text-center font-medium tabular-nums ${isShort ? "bg-rose-300/[0.08] text-rose-100" : "text-stone-300"}`}
+                              >
+                                <span className="block">{item?.quantity || "—"}</span>
+                                {isShort && (
+                                  <span className="mt-0.5 block text-[0.62rem] font-semibold uppercase tracking-wide text-rose-300">
+                                    {item!.shortQuantity} short
+                                  </span>
+                                )}
+                              </td>
+                            );
+                          })}
                         </tr>
                       );
                     })}
@@ -1199,21 +1229,35 @@ export function OrdersTab({
                       {!isSupplier && <td className="border-r border-white/[0.08] px-4 py-4 text-stone-600">
                         —
                       </td>}
-                      {productColumns.map((product) => (
-                        <td
-                          key={product.id}
-                          className="border-r border-white/[0.05] px-3 py-4 text-center tabular-nums text-cyan-200"
-                        >
-                          {filteredOrders.reduce(
-                            (total, order) =>
-                              total +
-                              (order.items.find(
-                                (item) => item.productId === product.id
-                              )?.quantity ?? 0),
-                            0
-                          )}
-                        </td>
-                      ))}
+                      {productColumns.map((product) => {
+                        const productTotals = filteredOrders.reduce(
+                          (totals, order) => {
+                            const item = order.items.find(
+                              (candidate) => candidate.productId === product.id
+                            );
+                            return {
+                              quantity: totals.quantity + (item?.quantity ?? 0),
+                              shortQuantity:
+                                totals.shortQuantity + (item?.shortQuantity ?? 0),
+                            };
+                          },
+                          { quantity: 0, shortQuantity: 0 }
+                        );
+
+                        return (
+                          <td
+                            key={product.id}
+                            className={`border-r border-white/[0.05] px-3 py-4 text-center tabular-nums ${productTotals.shortQuantity > 0 ? "bg-rose-300/[0.08] text-rose-100" : "text-cyan-200"}`}
+                          >
+                            <span className="block">{productTotals.quantity}</span>
+                            {productTotals.shortQuantity > 0 && (
+                              <span className="mt-0.5 block text-[0.62rem] font-semibold uppercase tracking-wide text-rose-300">
+                                {productTotals.shortQuantity} short
+                              </span>
+                            )}
+                          </td>
+                        );
+                      })}
                     </tr>
                   </tfoot>
                 </table>

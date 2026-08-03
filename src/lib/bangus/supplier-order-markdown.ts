@@ -6,6 +6,7 @@ import type {
 interface SupplierOrderLine {
   product: BangusProductRecord;
   quantity: number;
+  shortQuantity: number;
   supplierUnitPrice: number;
 }
 
@@ -57,14 +58,18 @@ const formatOrderLine = (
     ? formatFlavorVariant(line.product)
     : formatFlatProduct(line.product);
   const price = formatPeso(line.supplierUnitPrice);
+  const shortage =
+    line.shortQuantity > 0
+      ? ` — **⚠ SHORT / MISSING: ${line.shortQuantity}**`
+      : "";
 
   if (line.quantity === 1) {
-    return `- [ ] **1 × ${description}** — ${price}`;
+    return `- [ ] **1 × ${description}** — ${price}${shortage}`;
   }
 
   return `- [ ] **${line.quantity} × ${description}** — ${price} each = **${formatPeso(
     line.quantity * line.supplierUnitPrice
-  )}**`;
+  )}**${shortage}`;
 };
 
 export const generateBangusSupplierOrderMarkdown = (
@@ -73,16 +78,24 @@ export const generateBangusSupplierOrderMarkdown = (
 ) => {
   const quantityByProductAndPrice = new Map<
     string,
-    Map<number, number>
+    Map<number, { quantity: number; shortQuantity: number }>
   >();
 
   deliveryTable.orders.forEach((order) => {
     order.items.forEach((item) => {
       const quantitiesByPrice =
-        quantityByProductAndPrice.get(item.productId) ?? new Map<number, number>();
+        quantityByProductAndPrice.get(item.productId) ??
+        new Map<number, { quantity: number; shortQuantity: number }>();
+      const current = quantitiesByPrice.get(item.supplierUnitPrice) ?? {
+        quantity: 0,
+        shortQuantity: 0,
+      };
       quantitiesByPrice.set(
         item.supplierUnitPrice,
-        (quantitiesByPrice.get(item.supplierUnitPrice) ?? 0) + item.quantity
+        {
+          quantity: current.quantity + item.quantity,
+          shortQuantity: current.shortQuantity + item.shortQuantity,
+        }
       );
       quantityByProductAndPrice.set(item.productId, quantitiesByPrice);
     });
@@ -95,8 +108,8 @@ export const generateBangusSupplierOrderMarkdown = (
     if (!quantitiesByPrice) return;
 
     const categoryLines = linesByCategory.get(product.category) ?? [];
-    quantitiesByPrice.forEach((quantity, supplierUnitPrice) => {
-      categoryLines.push({ product, quantity, supplierUnitPrice });
+    quantitiesByPrice.forEach((quantities, supplierUnitPrice) => {
+      categoryLines.push({ product, ...quantities, supplierUnitPrice });
     });
     linesByCategory.set(product.category, categoryLines);
   });
@@ -110,6 +123,7 @@ export const generateBangusSupplierOrderMarkdown = (
 
   let productVariants = 0;
   let totalOrderUnits = 0;
+  let totalShortUnits = 0;
   let expectedSupplierTotal = 0;
 
   const categoryOrder = Array.from(
@@ -153,6 +167,7 @@ export const generateBangusSupplierOrderMarkdown = (
     categoryLines.forEach((line) => {
       productVariants += 1;
       totalOrderUnits += line.quantity;
+      totalShortUnits += line.shortQuantity;
       expectedSupplierTotal += line.quantity * line.supplierUnitPrice;
     });
     markdown.push("");
@@ -163,6 +178,8 @@ export const generateBangusSupplierOrderMarkdown = (
     "",
     `**Product Variants:** ${productVariants}  `,
     `**Total Order Units:** ${totalOrderUnits}  `,
+    `**Short / Missing Units:** ${totalShortUnits}  `,
+    `**Received Units:** ${Math.max(totalOrderUnits - totalShortUnits, 0)}  `,
     `**Expected Supplier Total:** **${formatPeso(expectedSupplierTotal)}**`,
     "",
     "Please confirm product availability and final total.",
