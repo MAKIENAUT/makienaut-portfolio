@@ -43,9 +43,11 @@ in the Vercel Development environment and pulled into `.env.local`.
 - Bangus catalog and orders always use `OW_MAIN_DB_DATABASE_URL`, including in
   Development. Add that variable to the Vercel Development environment with
   the same value as Production before using the Bangus back office locally.
-- Use different `ORBW_BACKOFFICE_PASSWORD_HASH` and `ORBW_AUTH_SECRET` values
-  for Development, Preview, and Production.
+- Use different `ORBW_AUTH_SECRET` values for Development, Preview, and
+  Production. Back-office users are stored in their respective databases; run
+  `npm run auth:admin:create` after deploying migrations to create or reset an
+  administrator account.
 
-To replace the development backoffice password, run `npm run auth:hash`, update
-`ORBW_BACKOFFICE_PASSWORD_HASH` in Vercel Development, then run
-`npm run env:dev:pull`.
+To reset the development administrator password, run `npm run auth:admin:create`
+after `npm run db:deploy`. The command updates the matching database record and
+does not store the password in Vercel environment variables.

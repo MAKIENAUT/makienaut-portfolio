@@ -4,7 +4,7 @@ import {
   isOrbWeaverLoginRateLimited,
   recordOrbWeaverLoginFailure,
 } from "@/lib/orb-weaver/login-attempts";
-import { verifyOrbWeaverPassword } from "@/lib/orb-weaver/password";
+import { authenticateOrbWeaverUser } from "@/lib/orb-weaver/auth";
 import {
   getOrbWeaverRequestFingerprint,
   isSameOriginRequest,
@@ -30,7 +30,11 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body = (await request.json()) as { password?: unknown };
+    const body = (await request.json()) as {
+      username?: unknown;
+      password?: unknown;
+    };
+    const username = typeof body.username === "string" ? body.username : "";
     const password = typeof body.password === "string" ? body.password : "";
     const sourceFingerprint = getOrbWeaverRequestFingerprint(request, "login");
 
@@ -44,7 +48,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!(await verifyOrbWeaverPassword(password))) {
+    const user = await authenticateOrbWeaverUser(username, password);
+
+    // The back-office is intentionally restricted to administrator accounts.
+    // Customer-facing users can later use the same database table without
+    // receiving access to these management routes.
+    if (!user || user.role !== "ADMIN") {
       if (sourceFingerprint) {
         await recordOrbWeaverLoginFailure(sourceFingerprint);
       }
@@ -56,7 +65,7 @@ export async function POST(request: NextRequest) {
       await clearOrbWeaverLoginFailures(sourceFingerprint);
     }
 
-    const session = await createOrbWeaverSession();
+    const session = await createOrbWeaverSession(user);
     const response = NextResponse.json({ message: "Signed in." });
 
     response.cookies.set(ORB_WEAVER_SESSION_COOKIE, session, {

@@ -18,7 +18,10 @@ export function OrbWeaverLoginForm() {
       const response = await fetch("/api/orb-weaver/session", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ password: formData.get("password") }),
+        body: JSON.stringify({
+          username: formData.get("username"),
+          password: formData.get("password"),
+        }),
       });
       const result = (await response.json()) as { message?: string };
 
@@ -40,8 +43,26 @@ export function OrbWeaverLoginForm() {
   return (
     <form onSubmit={handleSubmit} className="mt-8">
       <label
-        htmlFor="orb-backoffice-password"
+        htmlFor="orb-backoffice-username"
         className="mb-2 block text-sm font-medium text-stone-200"
+      >
+        Username
+      </label>
+      <input
+        id="orb-backoffice-username"
+        name="username"
+        type="text"
+        autoComplete="username"
+        required
+        autoFocus
+        maxLength={80}
+        className="min-h-12 w-full rounded-xl border border-white/10 bg-black/35 px-4 py-3 text-white outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
+        placeholder="Enter your username"
+      />
+
+      <label
+        htmlFor="orb-backoffice-password"
+        className="mb-2 mt-5 block text-sm font-medium text-stone-200"
       >
         Back-office password
       </label>
@@ -56,7 +77,6 @@ export function OrbWeaverLoginForm() {
           type="password"
           autoComplete="current-password"
           required
-          autoFocus
           maxLength={256}
           className="min-h-12 w-full rounded-xl border border-white/10 bg-black/35 py-3 pl-11 pr-4 text-white outline-none transition placeholder:text-stone-600 focus:border-amber-400 focus:ring-2 focus:ring-amber-400/20"
           placeholder="Enter your password"

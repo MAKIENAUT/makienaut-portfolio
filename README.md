@@ -44,17 +44,18 @@ The helmet-cleaning experience is available at:
 - Private back-office: `/vroombroom/backoffice`
 
 Copy `.env.example` to `.env.local`, then add the Vercel Prisma Postgres
-credentials and back-office secrets. The local file is ignored by Git.
+credentials and back-office session secret. The local file is ignored by Git.
 
-Generate a secure password hash:
+Create or reset the database-backed `admin` back-office account:
 
 ```bash
-npm run auth:hash
+npm run db:deploy
+npm run auth:admin:create
 ```
 
-The command prints both `ORBW_BACKOFFICE_PASSWORD_HASH` and a new
-`ORBW_AUTH_SECRET`. Add both values to `.env.local` for development and to the
-Vercel project environment for production.
+The command defaults to username `admin`, prompts for a password, and saves
+only an scrypt hash in the database. Run it separately in each development,
+preview, or production database.
 
 Generate the Prisma client and apply the committed migration:
 

@@ -22,6 +22,24 @@ enum BangusPaymentMethod {
   BANK
 }
 
+enum OrbWeaverUserRole {
+  ADMIN
+  USER
+}
+
+model OrbWeaverUser {
+  id           String             @id @default(uuid()) @db.Uuid
+  username     String             @unique @db.VarChar(80)
+  passwordHash String             @db.VarChar(256)
+  role         OrbWeaverUserRole @default(USER)
+  isActive     Boolean            @default(true)
+  createdAt    DateTime           @default(now()) @db.Timestamptz(3)
+  updatedAt    DateTime           @updatedAt @db.Timestamptz(3)
+
+  @@index([role, isActive])
+  @@map("orb_weaver_users")
+}
+
 model OrbWeaverAppointment {
   id                 String            @id @default(uuid()) @db.Uuid
   publicReference    String?           @unique @db.VarChar(16)

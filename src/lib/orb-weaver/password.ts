@@ -15,9 +15,10 @@ const deriveKey = (password: string, salt: Buffer, keyLength: number) =>
     });
   });
 
-export const verifyOrbWeaverPassword = async (password: string) => {
-  const storedHash = process.env.ORBW_BACKOFFICE_PASSWORD_HASH;
-
+export const verifyOrbWeaverPassword = async (
+  password: string,
+  storedHash: string
+) => {
   if (!storedHash || password.length > 256) {
     return false;
   }

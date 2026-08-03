@@ -6,7 +6,8 @@ const audience = "orb-weaver-backoffice";
 const encoder = new TextEncoder();
 
 interface SessionPayload {
-  sub: "owner";
+  sub: string;
+  role: "ADMIN" | "USER";
   iat: number;
   exp: number;
   iss: typeof issuer;
@@ -58,13 +59,17 @@ const getSigningKey = async () => {
   );
 };
 
-export const createOrbWeaverSession = async () => {
+export const createOrbWeaverSession = async (user: {
+  id: string;
+  role: "ADMIN" | "USER";
+}) => {
   const now = Math.floor(Date.now() / 1000);
   const header = encodeBase64Url(
     JSON.stringify({ alg: "HS256", typ: "JWT" })
   );
   const payload: SessionPayload = {
-    sub: "owner",
+    sub: user.id,
+    role: user.role,
     iat: now,
     exp: now + ORB_WEAVER_SESSION_MAX_AGE,
     iss: issuer,
@@ -132,7 +137,9 @@ export const verifyOrbWeaverSession = async (token?: string) => {
     const now = Math.floor(Date.now() / 1000);
 
     return (
-      payload.sub === "owner" &&
+      typeof payload.sub === "string" &&
+      payload.sub.length > 0 &&
+      (payload.role === "ADMIN" || payload.role === "USER") &&
       payload.iss === issuer &&
       payload.aud === audience &&
       typeof payload.iat === "number" &&
