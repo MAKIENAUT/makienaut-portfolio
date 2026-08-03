@@ -23,6 +23,7 @@ interface OrderDetailsModalProps {
   order: BangusOrderRecord;
   products: BangusProductRecord[];
   showSupplierPrices: boolean;
+  accessMode?: "admin" | "supplier";
   onClose: () => void;
   onEdit: () => void;
 }
@@ -54,9 +55,11 @@ export function OrderDetailsModal({
   order,
   products,
   showSupplierPrices,
+  accessMode = "admin",
   onClose,
   onEdit,
 }: OrderDetailsModalProps) {
+  const isSupplier = accessMode === "supplier";
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -134,15 +137,17 @@ export function OrderDetailsModal({
         <div className="p-5 sm:p-6">
           <section
             className={`grid gap-3 ${
-              showSupplierPrices ? "sm:grid-cols-3" : "sm:grid-cols-1"
+              !isSupplier && showSupplierPrices ? "sm:grid-cols-3" : "sm:grid-cols-1"
             }`}
           >
-            <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-              <p className="text-xs text-stone-500">Retail total</p>
-              <p className="mt-2 text-xl font-semibold text-emerald-300">
-                {formatPeso(order.retailTotal)}
-              </p>
-            </article>
+            {!isSupplier && (
+              <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                <p className="text-xs text-stone-500">Retail total</p>
+                <p className="mt-2 text-xl font-semibold text-emerald-300">
+                  {formatPeso(order.retailTotal)}
+                </p>
+              </article>
+            )}
             {showSupplierPrices && (
               <>
                 <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
@@ -151,21 +156,23 @@ export function OrderDetailsModal({
                     {formatPeso(order.supplierTotal)}
                   </p>
                 </article>
-                <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
-                  <p className="text-xs text-stone-500">Markup</p>
-                  <p className="mt-2 text-xl font-semibold text-cyan-300">
-                    {formatPeso(order.retailTotal - order.supplierTotal)}
-                  </p>
-                </article>
+                {!isSupplier && (
+                  <article className="rounded-2xl border border-white/[0.08] bg-black/20 p-4">
+                    <p className="text-xs text-stone-500">Markup</p>
+                    <p className="mt-2 text-xl font-semibold text-cyan-300">
+                      {formatPeso(order.retailTotal - order.supplierTotal)}
+                    </p>
+                  </article>
+                )}
               </>
             )}
           </section>
 
-          <section className="mt-5 grid gap-3 rounded-2xl border border-white/[0.08] p-4 sm:grid-cols-4">
+          <section className={`mt-5 grid gap-3 rounded-2xl border border-white/[0.08] p-4 ${isSupplier ? "sm:grid-cols-2" : "sm:grid-cols-4"}`}>
             {[
               { label: "Repacked", value: order.repacked },
               { label: "Received", value: order.received },
-              { label: "Paid", value: order.paid },
+              ...(!isSupplier ? [{ label: "Paid", value: order.paid }] : []),
             ].map((status) => {
               const Icon = status.value ? FaCheckCircle : FaTimesCircle;
               return (
@@ -185,14 +192,14 @@ export function OrderDetailsModal({
                 </div>
               );
             })}
-            <div>
+            {!isSupplier && <div>
               <p className="text-xs text-stone-500">Payment method</p>
               <p className="mt-1 text-sm font-medium text-stone-200">
                 {order.paymentMethod
                   ? paymentLabels[order.paymentMethod]
                   : "Not set"}
               </p>
-            </div>
+            </div>}
           </section>
 
           <section className="mt-5 overflow-hidden rounded-2xl border border-white/[0.08]">
@@ -229,15 +236,17 @@ export function OrderDetailsModal({
                       </p>
                     )}
                   </div>
-                  <div className="min-w-28 sm:text-right">
-                    <p className="text-xs text-stone-500">Retail subtotal</p>
-                    <p className="mt-1 font-semibold text-emerald-300">
-                      {formatPeso(item.quantity * item.retailUnitPrice)}
-                    </p>
-                    <p className="mt-0.5 text-xs text-stone-600">
-                      {formatPeso(item.retailUnitPrice)} each
-                    </p>
-                  </div>
+                  {!isSupplier && (
+                    <div className="min-w-28 sm:text-right">
+                      <p className="text-xs text-stone-500">Retail subtotal</p>
+                      <p className="mt-1 font-semibold text-emerald-300">
+                        {formatPeso(item.quantity * item.retailUnitPrice)}
+                      </p>
+                      <p className="mt-0.5 text-xs text-stone-600">
+                        {formatPeso(item.retailUnitPrice)} each
+                      </p>
+                    </div>
+                  )}
                 </article>
               ))}
             </div>
@@ -252,14 +261,14 @@ export function OrderDetailsModal({
           >
             Close
           </button>
-          <button
+          {!isSupplier && <button
             type="button"
             onClick={onEdit}
             className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200"
           >
             <FaEdit aria-hidden="true" />
             Edit order
-          </button>
+          </button>}
         </footer>
       </section>
     </div>

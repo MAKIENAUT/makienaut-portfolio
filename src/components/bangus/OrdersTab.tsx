@@ -36,6 +36,7 @@ import {
 interface OrdersTabProps {
   products: BangusProductRecord[];
   initialDeliveryTables: BangusDeliveryTableRecord[];
+  accessMode?: "admin" | "supplier";
 }
 
 type PaymentStatusFilter = "ALL" | "PAID" | "UNPAID";
@@ -81,7 +82,9 @@ const getManilaDate = () => {
 export function OrdersTab({
   products,
   initialDeliveryTables,
+  accessMode = "admin",
 }: OrdersTabProps) {
+  const isSupplier = accessMode === "supplier";
   const [deliveryTables, setDeliveryTables] = useState(initialDeliveryTables);
   const [selectedTableId, setSelectedTableId] = useState(
     initialDeliveryTables[0]?.id ?? ""
@@ -89,7 +92,7 @@ export function OrdersTab({
   const [newDeliveryDate, setNewDeliveryDate] = useState(getManilaDate);
   const [newTableName, setNewTableName] = useState("");
   const [showDateForm, setShowDateForm] = useState(
-    initialDeliveryTables.length === 0
+    !isSupplier && initialDeliveryTables.length === 0
   );
   const [isCreatingTable, setIsCreatingTable] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -129,8 +132,12 @@ export function OrdersTab({
         !normalizedQuery ||
         [
           order.customerName,
-          order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
-          order.paid ? "paid" : "unpaid",
+          ...(!isSupplier
+            ? [
+                order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
+                order.paid ? "paid" : "unpaid",
+              ]
+            : []),
           order.repacked ? "repacked" : "not repacked",
           order.received ? "received" : "not received",
           ...order.items.map((item) => {
@@ -141,6 +148,7 @@ export function OrdersTab({
           }),
         ].some((value) => value.toLowerCase().includes(normalizedQuery));
       const matchesPayment =
+        isSupplier ||
         paymentStatusFilter === "ALL" ||
         (paymentStatusFilter === "PAID" && order.paid) ||
         (paymentStatusFilter === "UNPAID" && !order.paid);
@@ -153,6 +161,7 @@ export function OrdersTab({
     });
   }, [
     orderQuery,
+    isSupplier,
     paymentStatusFilter,
     productColumns,
     receiptStatusFilter,
@@ -558,7 +567,7 @@ export function OrdersTab({
                   </select>
                 </label>
               )}
-              {selectedTable && (
+              {selectedTable && !isSupplier && (
                 <button
                   type="button"
                   onClick={openNewOrder}
@@ -568,7 +577,7 @@ export function OrdersTab({
                   Add order
                 </button>
               )}
-              {selectedTable && (
+              {selectedTable && !isSupplier && (
                 <button
                   type="button"
                   onClick={() => void openProductMetrics()}
@@ -582,7 +591,7 @@ export function OrdersTab({
                   </span>
                 </button>
               )}
-              <button
+              {!isSupplier && <button
                 type="button"
                 onClick={() => setShowDateForm((current) => !current)}
                 aria-label="Create a new order table"
@@ -591,7 +600,7 @@ export function OrdersTab({
               >
                 <FaCalendarAlt aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">New table</span>
-              </button>
+              </button>}
               <details className="group relative shrink-0">
                 <summary
                   aria-label="More table actions"
@@ -600,7 +609,7 @@ export function OrdersTab({
                   <FaEllipsisH aria-hidden="true" />
                 </summary>
                 <div className="absolute right-0 top-12 z-30 grid w-56 gap-1 rounded-xl border border-white/10 bg-[#171c1a] p-2 shadow-2xl sm:static sm:flex sm:w-auto sm:bg-transparent sm:p-0 sm:shadow-none">
-                  <button
+                  {!isSupplier && <button
                     type="button"
                     disabled={isRefreshing}
                     onClick={() => void refreshTables()}
@@ -608,10 +617,10 @@ export function OrdersTab({
                   >
                     <FaSyncAlt aria-hidden="true" className={isRefreshing ? "animate-spin" : ""} />
                     Refresh
-                  </button>
+                  </button>}
                   {selectedTable && (
                     <>
-                      <button
+                      {!isSupplier && <button
                         type="button"
                         onClick={() => setShowSupplierPrices((current) => !current)}
                         className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-white/10"
@@ -619,7 +628,7 @@ export function OrdersTab({
                       >
                         {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
                         {showSupplierPrices ? "Hide supplier" : "Show supplier"}
-                      </button>
+                      </button>}
                       <button
                         type="button"
                         disabled={selectedTable.orders.length === 0}
@@ -637,7 +646,7 @@ export function OrdersTab({
             </div>
           </div>
 
-          {showDateForm && (
+          {!isSupplier && showDateForm && (
             <form
               onSubmit={createDeliveryTable}
               className="mt-3 grid gap-2 rounded-lg border border-cyan-300/15 bg-cyan-300/[0.04] p-3 sm:mt-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end sm:gap-3 sm:rounded-xl sm:p-4"
@@ -667,14 +676,14 @@ export function OrdersTab({
                   className="mt-1 min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-white outline-none focus:border-cyan-300 sm:mt-2 sm:min-h-11 sm:rounded-xl"
                 />
               </label>
-              <button
+              {!isSupplier && <button
                 type="submit"
                 disabled={isCreatingTable}
                   className="inline-flex min-h-10 items-center justify-center gap-2 rounded-lg bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:rounded-xl"
               >
                 <FaPlus aria-hidden="true" />
                 {isCreatingTable ? "Creating…" : "Create table"}
-              </button>
+              </button>}
               {deliveryTables.length > 0 && (
                 <button
                   type="button"
@@ -688,7 +697,7 @@ export function OrdersTab({
           )}
 
           {selectedTable && selectedTable.orders.length > 0 && (
-            <div className="mt-3 grid gap-2 sm:mt-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+            <div className={`mt-3 grid gap-2 sm:mt-5 sm:items-center ${isSupplier ? "sm:grid-cols-[minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto_auto]"}`}>
               <label className="block">
                 <span className="sr-only">Search orders in this table</span>
                 <div className="relative">
@@ -705,7 +714,7 @@ export function OrdersTab({
                   />
                 </div>
               </label>
-              <label>
+              {!isSupplier && <label>
                 <span className="sr-only">Filter by payment status</span>
                 <select
                   value={paymentStatusFilter}
@@ -720,7 +729,7 @@ export function OrdersTab({
                   <option value="PAID">Paid</option>
                   <option value="UNPAID">Unpaid</option>
                 </select>
-              </label>
+              </label>}
               <label>
                 <span className="sr-only">Filter by receipt status</span>
                 <select
@@ -738,7 +747,7 @@ export function OrdersTab({
                 </select>
               </label>
               {(orderQuery ||
-                paymentStatusFilter !== "ALL" ||
+                (!isSupplier && paymentStatusFilter !== "ALL") ||
                 receiptStatusFilter !== "ALL") && (
                 <p className="text-xs text-stone-500 sm:col-span-3">
                   {filteredOrders.length} of {selectedTable.orders.length} orders shown
@@ -774,14 +783,16 @@ export function OrdersTab({
           <>
             <section
               aria-label="Delivery table summary"
-              className="grid grid-cols-5 gap-px border-b border-white/[0.08] bg-white/[0.08]"
+              className={`grid gap-px border-b border-white/[0.08] bg-white/[0.08] ${isSupplier ? "grid-cols-3" : "grid-cols-5"}`}
             >
               {[
-                {
-                  label: "Retail total",
-                  value: formatPeso(tableTotals.retail),
-                  classes: "text-emerald-300",
-                },
+                ...(!isSupplier
+                  ? [{
+                      label: "Retail total",
+                      value: formatPeso(tableTotals.retail),
+                      classes: "text-emerald-300",
+                    }]
+                  : []),
                 {
                   label: "Supplier total",
                   value: showSupplierPrices
@@ -789,11 +800,13 @@ export function OrdersTab({
                     : "Hidden",
                   classes: "text-stone-200",
                 },
-                {
-                  label: "Paid",
-                  value: `${tableTotals.paid}/${filteredOrders.length}`,
-                  classes: "text-cyan-300",
-                },
+                ...(!isSupplier
+                  ? [{
+                      label: "Paid",
+                      value: `${tableTotals.paid}/${filteredOrders.length}`,
+                      classes: "text-cyan-300",
+                    }]
+                  : []),
                 {
                   label: "Repacked",
                   value: `${tableTotals.repacked}/${filteredOrders.length}`,
@@ -823,14 +836,14 @@ export function OrdersTab({
                 <p className="mt-4 font-medium text-stone-300">
                   This delivery table has no orders.
                 </p>
-                <button
+                {!isSupplier && <button
                   type="button"
                   onClick={openNewOrder}
                   className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-cyan-300 px-5 text-sm font-bold text-[#071211] transition hover:bg-cyan-200"
                 >
                   <FaPlus aria-hidden="true" />
                   Add the first order
-                </button>
+                </button>}
               </div>
             ) : filteredOrders.length === 0 ? (
               <div className="px-5 py-16 text-center">
@@ -878,16 +891,16 @@ export function OrdersTab({
                           </span>
                         </button>
                         <div className="shrink-0 text-right">
-                          <p className="text-sm font-semibold tabular-nums text-emerald-300">
+                          {!isSupplier && <p className="text-sm font-semibold tabular-nums text-emerald-300">
                             {formatPeso(order.retailTotal)}
-                          </p>
+                          </p>}
                           {showSupplierPrices && (
-                            <p className="text-[0.65rem] tabular-nums text-stone-500">
-                              {formatPeso(order.supplierTotal)} cost
+                            <p className={`${isSupplier ? "text-sm font-semibold text-stone-300" : "text-[0.65rem] text-stone-500"} tabular-nums`}>
+                              {formatPeso(order.supplierTotal)}{!isSupplier && " cost"}
                             </p>
                           )}
                         </div>
-                        <div className="flex shrink-0">
+                        {!isSupplier && <div className="flex shrink-0">
                           <button
                             type="button"
                             disabled={isBusy}
@@ -906,15 +919,15 @@ export function OrdersTab({
                           >
                             <FaTrash aria-hidden="true" />
                           </button>
-                        </div>
+                        </div>}
                       </div>
 
-                      <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)] gap-1.5">
+                      <div className={`mt-2 grid gap-1.5 ${isSupplier ? "grid-cols-2" : "grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)]"}`}>
                         <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
                             checked={order.repacked}
-                            disabled={isBusy}
+                            disabled={isBusy || isSupplier}
                             onChange={(event) =>
                               void updateStatus(order, {
                                 repacked: event.target.checked,
@@ -928,7 +941,7 @@ export function OrdersTab({
                           <input
                             type="checkbox"
                             checked={order.received}
-                            disabled={isBusy}
+                            disabled={isBusy || isSupplier}
                             onChange={(event) =>
                               void updateStatus(order, {
                                 received: event.target.checked,
@@ -938,7 +951,7 @@ export function OrdersTab({
                           />
                           Received
                         </label>
-                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
+                        {!isSupplier && <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
                             checked={order.paid}
@@ -949,8 +962,8 @@ export function OrdersTab({
                             className="h-3.5 w-3.5 accent-cyan-300"
                           />
                           Paid
-                        </label>
-                        <PaymentMethodPicker
+                        </label>}
+                        {!isSupplier && <PaymentMethodPicker
                           value={order.paymentMethod}
                           disabled={isBusy}
                           onChange={(paymentMethod) =>
@@ -960,7 +973,7 @@ export function OrdersTab({
                           }
                           label={`${order.customerName} payment method`}
                           compact
-                        />
+                        />}
                       </div>
 
                       <div className="mt-2 min-w-0">
@@ -1000,9 +1013,9 @@ export function OrdersTab({
                       <th className="sticky left-0 top-0 z-30 min-w-56 border-r border-white/[0.08] bg-[#0d100f] px-5 py-4 font-semibold">
                         Orders
                       </th>
-                      <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
+                      {!isSupplier && <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
                         Retail price
-                      </th>
+                      </th>}
                       {showSupplierPrices && (
                         <th className="sticky top-0 z-20 min-w-32 bg-[#0d100f] px-4 py-4 text-right font-semibold">
                           Supplier price
@@ -1014,12 +1027,12 @@ export function OrdersTab({
                       <th className="sticky top-0 z-20 min-w-24 bg-[#0d100f] px-4 py-4 text-center font-semibold">
                         Received
                       </th>
-                      <th className="sticky top-0 z-20 min-w-20 bg-[#0d100f] px-4 py-4 text-center font-semibold">
+                      {!isSupplier && <th className="sticky top-0 z-20 min-w-20 bg-[#0d100f] px-4 py-4 text-center font-semibold">
                         Paid
-                      </th>
-                      <th className="sticky top-0 z-20 min-w-36 border-r border-white/[0.08] bg-[#0d100f] px-4 py-4 font-semibold">
+                      </th>}
+                      {!isSupplier && <th className="sticky top-0 z-20 min-w-36 border-r border-white/[0.08] bg-[#0d100f] px-4 py-4 font-semibold">
                         Payment method
-                      </th>
+                      </th>}
                       {productColumns.map((product) => (
                         <th
                           key={product.id}
@@ -1052,7 +1065,7 @@ export function OrdersTab({
                               >
                                 {order.customerName}
                               </button>
-                              <div className="flex shrink-0">
+                              {!isSupplier && <div className="flex shrink-0">
                                 <button
                                   type="button"
                                   disabled={isBusy}
@@ -1071,12 +1084,12 @@ export function OrdersTab({
                                 >
                                   <FaTrash aria-hidden="true" />
                                 </button>
-                              </div>
+                              </div>}
                             </div>
                           </td>
-                          <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-300">
+                          {!isSupplier && <td className="px-4 py-3 text-right font-semibold tabular-nums text-emerald-300">
                             {formatPeso(order.retailTotal)}
-                          </td>
+                          </td>}
                           {showSupplierPrices && (
                             <td className="px-4 py-3 text-right tabular-nums text-stone-400">
                               {formatPeso(order.supplierTotal)}
@@ -1090,7 +1103,7 @@ export function OrdersTab({
                               <input
                                 type="checkbox"
                                 checked={order.repacked}
-                                disabled={isBusy}
+                                disabled={isBusy || isSupplier}
                                 onChange={(event) =>
                                   void updateStatus(order, {
                                     repacked: event.target.checked,
@@ -1108,7 +1121,7 @@ export function OrdersTab({
                               <input
                                 type="checkbox"
                                 checked={order.received}
-                                disabled={isBusy}
+                                disabled={isBusy || isSupplier}
                                 onChange={(event) =>
                                   void updateStatus(order, {
                                     received: event.target.checked,
@@ -1118,7 +1131,7 @@ export function OrdersTab({
                               />
                             </label>
                           </td>
-                          <td className="px-4 py-3 text-center">
+                          {!isSupplier && <td className="px-4 py-3 text-center">
                             <label className="inline-flex cursor-pointer items-center">
                               <span className="sr-only">
                                 {order.customerName} paid
@@ -1135,8 +1148,8 @@ export function OrdersTab({
                                 className="h-4 w-4 accent-cyan-300"
                               />
                             </label>
-                          </td>
-                          <td className="border-r border-white/[0.08] px-4 py-3">
+                          </td>}
+                          {!isSupplier && <td className="border-r border-white/[0.08] px-4 py-3">
                             <PaymentMethodPicker
                               value={order.paymentMethod}
                               disabled={isBusy}
@@ -1148,7 +1161,7 @@ export function OrdersTab({
                               label={`${order.customerName} payment method`}
                               compact
                             />
-                          </td>
+                          </td>}
                           {productColumns.map((product) => (
                             <td
                               key={product.id}
@@ -1166,9 +1179,9 @@ export function OrdersTab({
                       <th className="sticky left-0 z-10 border-r border-white/[0.08] bg-[#0d100f] px-5 py-4 text-xs uppercase tracking-[0.08em] text-stone-400">
                         Totals
                       </th>
-                      <td className="px-4 py-4 text-right tabular-nums text-emerald-300">
+                      {!isSupplier && <td className="px-4 py-4 text-right tabular-nums text-emerald-300">
                         {formatPeso(tableTotals.retail)}
-                      </td>
+                      </td>}
                       {showSupplierPrices && (
                         <td className="px-4 py-4 text-right tabular-nums text-stone-300">
                           {formatPeso(tableTotals.supplier)}
@@ -1180,12 +1193,12 @@ export function OrdersTab({
                       <td className="px-4 py-4 text-center text-cyan-200">
                         {tableTotals.received}
                       </td>
-                      <td className="px-4 py-4 text-center text-cyan-200">
+                      {!isSupplier && <td className="px-4 py-4 text-center text-cyan-200">
                         {tableTotals.paid}
-                      </td>
-                      <td className="border-r border-white/[0.08] px-4 py-4 text-stone-600">
+                      </td>}
+                      {!isSupplier && <td className="border-r border-white/[0.08] px-4 py-4 text-stone-600">
                         —
-                      </td>
+                      </td>}
                       {productColumns.map((product) => (
                         <td
                           key={product.id}
@@ -1213,20 +1226,20 @@ export function OrdersTab({
                 Product headings are abbreviated. Hover over one to see its
                 full catalog name.
               </p>
-              <button
+              {!isSupplier && <button
                 type="button"
                 onClick={() => void deleteDeliveryTable()}
                 className="inline-flex min-h-10 items-center justify-center gap-2 rounded-xl px-3 text-xs font-semibold text-stone-600 transition hover:bg-red-300/10 hover:text-red-200"
               >
                 <FaTrash aria-hidden="true" />
                 Delete this date table
-              </button>
+              </button>}
             </footer>
           </>
         )}
       </section>
 
-      {selectedTable && (
+      {selectedTable && !isSupplier && (
         <button
           type="button"
           onClick={openNewOrder}
@@ -1243,6 +1256,7 @@ export function OrdersTab({
           order={viewingOrder}
           products={products}
           showSupplierPrices={showSupplierPrices}
+          accessMode={accessMode}
           onClose={() => setViewingOrderId(null)}
           onEdit={() => {
             setViewingOrderId(null);
@@ -1251,7 +1265,7 @@ export function OrdersTab({
         />
       )}
 
-      {isOrderFormOpen && selectedTable && (
+      {!isSupplier && isOrderFormOpen && selectedTable && (
         <OrderFormModal
           deliveryDate={selectedTable.deliveryDate}
           order={editingOrder}

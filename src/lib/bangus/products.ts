@@ -88,6 +88,43 @@ export const listBangusSupplierProducts = async (): Promise<
   });
 };
 
+export const listBangusSupplierCatalog = async (): Promise<BangusCatalogRecord> => {
+  const database = getBangusDatabase();
+  const products = await database.bangusProduct.findMany({
+    select: {
+      id: true,
+      name: true,
+      supplierPrice: true,
+      category: { select: { name: true } },
+      sizePack: true,
+      flavor: true,
+      pieces: true,
+      isActive: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
+
+  return {
+    products: products.map((product) => ({
+      id: product.id,
+      name: product.name,
+      supplierPrice: product.supplierPrice,
+      retailPrice: 0,
+      markup: 0,
+      category: product.category.name,
+      sizePack: product.sizePack,
+      flavor: product.flavor,
+      pieces: product.pieces,
+      isActive: product.isActive,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+    })),
+    categories: [],
+  };
+};
+
 export const createBangusProduct = async (
   input: BangusProductInput
 ): Promise<BangusProductRecord> => {

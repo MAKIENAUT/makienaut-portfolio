@@ -3,26 +3,20 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FaArrowLeft, FaDatabase, FaFish } from "react-icons/fa";
 import { BangusDashboard } from "@/components/bangus/BangusDashboard";
-import { SupplierOrdersDashboard } from "@/components/bangus/SupplierOrdersDashboard";
 import { OrbWeaverLogoutButton } from "@/components/orb-weaver/LogoutButton";
 import {
   listBangusDeliveryTables,
-  listBangusSupplierDeliveryTables,
+  listBangusSupplierOrderView,
 } from "@/lib/bangus/orders";
 import {
   listBangusCatalog,
-  listBangusSupplierProducts,
+  listBangusSupplierCatalog,
 } from "@/lib/bangus/products";
 import {
   ORB_WEAVER_SESSION_COOKIE,
   verifyOrbWeaverSession,
 } from "@/lib/orb-weaver/session";
-import type {
-  BangusCatalogRecord,
-  BangusDeliveryTableRecord,
-  BangusSupplierDeliveryTableRecord,
-  BangusSupplierProductRecord,
-} from "@/types/bangus";
+import type { BangusCatalogRecord, BangusDeliveryTableRecord } from "@/types/bangus";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -40,14 +34,12 @@ export default async function BangusBackofficePage() {
   let databaseError = "";
   let catalog: BangusCatalogRecord = { products: [], categories: [] };
   let deliveryTables: BangusDeliveryTableRecord[] = [];
-  let supplierProducts: BangusSupplierProductRecord[] = [];
-  let supplierDeliveryTables: BangusSupplierDeliveryTableRecord[] = [];
 
   try {
     if (isSupplier) {
-      [supplierProducts, supplierDeliveryTables] = await Promise.all([
-        listBangusSupplierProducts(),
-        listBangusSupplierDeliveryTables(),
+      [catalog, deliveryTables] = await Promise.all([
+        listBangusSupplierCatalog(),
+        listBangusSupplierOrderView(),
       ]);
     } else {
       [catalog, deliveryTables] = await Promise.all([
@@ -124,17 +116,11 @@ export default async function BangusBackofficePage() {
             </p>
           </section>
         ) : (
-          isSupplier ? (
-            <SupplierOrdersDashboard
-              products={supplierProducts}
-              deliveryTables={supplierDeliveryTables}
-            />
-          ) : (
-            <BangusDashboard
-              initialCatalog={catalog}
-              initialDeliveryTables={deliveryTables}
-            />
-          )
+          <BangusDashboard
+            initialCatalog={catalog}
+            initialDeliveryTables={deliveryTables}
+            accessMode={isSupplier ? "supplier" : "admin"}
+          />
         )}
       </main>
     </div>

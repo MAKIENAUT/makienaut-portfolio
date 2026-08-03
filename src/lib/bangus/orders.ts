@@ -171,6 +171,69 @@ export const listBangusSupplierDeliveryTables = async (): Promise<
   }));
 };
 
+export const listBangusSupplierOrderView = async (): Promise<
+  BangusDeliveryTableRecord[]
+> => {
+  const database = getBangusDatabase();
+  const tables = await database.bangusDeliveryTable.findMany({
+    select: {
+      id: true,
+      name: true,
+      deliveryDate: true,
+      createdAt: true,
+      updatedAt: true,
+      orders: {
+        select: {
+          id: true,
+          customerName: true,
+          repacked: true,
+          received: true,
+          createdAt: true,
+          updatedAt: true,
+          items: {
+            select: {
+              productId: true,
+              quantity: true,
+              shortQuantity: true,
+              supplierUnitPrice: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
+    },
+    orderBy: [{ deliveryDate: "desc" }, { name: "asc" }],
+  });
+
+  return tables.map((table) => ({
+    id: table.id,
+    name: table.name,
+    deliveryDate: table.deliveryDate.toISOString().slice(0, 10),
+    orders: table.orders.map((order) => ({
+      id: order.id,
+      customerName: order.customerName,
+      repacked: order.repacked,
+      received: order.received,
+      paid: false,
+      paymentMethod: null,
+      items: order.items.map((item) => ({
+        ...item,
+        retailUnitPrice: 0,
+      })),
+      supplierTotal: order.items.reduce(
+        (total, item) => total + item.quantity * item.supplierUnitPrice,
+        0
+      ),
+      retailTotal: 0,
+      createdAt: order.createdAt.toISOString(),
+      updatedAt: order.updatedAt.toISOString(),
+    })),
+    createdAt: table.createdAt.toISOString(),
+    updatedAt: table.updatedAt.toISOString(),
+  }));
+};
+
 export const createBangusDeliveryTable = async (
   name: string,
   deliveryDate: string

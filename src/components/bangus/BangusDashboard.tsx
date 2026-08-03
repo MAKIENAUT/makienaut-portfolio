@@ -25,6 +25,7 @@ import type {
 interface BangusDashboardProps {
   initialCatalog: BangusCatalogRecord;
   initialDeliveryTables: BangusDeliveryTableRecord[];
+  accessMode?: "admin" | "supplier";
 }
 
 type CatalogStatusFilter = "ALL" | "ACTIVE" | "INACTIVE";
@@ -59,7 +60,9 @@ const productToInput = (product: BangusProductRecord): BangusProductInput => ({
 export function BangusDashboard({
   initialCatalog,
   initialDeliveryTables,
+  accessMode = "admin",
 }: BangusDashboardProps) {
+  const isSupplier = accessMode === "supplier";
   const [activeTab, setActiveTab] = useState<BangusTab>("orders");
   const [products, setProducts] = useState(initialCatalog.products);
   const [categories, setCategories] = useState(initialCatalog.categories);
@@ -260,7 +263,7 @@ export function BangusDashboard({
 
   return (
     <>
-      <nav
+      {!isSupplier && <nav
         aria-label="Bangus business sections"
         className="mb-3 flex gap-1 rounded-xl border border-white/[0.08] bg-white/[0.035] p-1 sm:mb-8 sm:w-fit sm:rounded-2xl sm:p-1.5"
       >
@@ -287,12 +290,13 @@ export function BangusDashboard({
             </button>
           );
         })}
-      </nav>
+      </nav>}
 
-      {activeTab === "orders" ? (
+      {isSupplier || activeTab === "orders" ? (
         <OrdersTab
           products={products}
           initialDeliveryTables={initialDeliveryTables}
+          accessMode={accessMode}
         />
       ) : (
         <>
