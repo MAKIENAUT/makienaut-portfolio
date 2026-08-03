@@ -3,9 +3,16 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { FaArrowLeft, FaDatabase, FaFish } from "react-icons/fa";
 import { BangusDashboard } from "@/components/bangus/BangusDashboard";
+import { SupplierOrdersDashboard } from "@/components/bangus/SupplierOrdersDashboard";
 import { OrbWeaverLogoutButton } from "@/components/orb-weaver/LogoutButton";
-import { listBangusDeliveryTables } from "@/lib/bangus/orders";
-import { listBangusCatalog } from "@/lib/bangus/products";
+import {
+  listBangusDeliveryTables,
+  listBangusSupplierDeliveryTables,
+} from "@/lib/bangus/orders";
+import {
+  listBangusCatalog,
+  listBangusSupplierProducts,
+} from "@/lib/bangus/products";
 import {
   ORB_WEAVER_SESSION_COOKIE,
   verifyOrbWeaverSession,
@@ -13,27 +20,41 @@ import {
 import type {
   BangusCatalogRecord,
   BangusDeliveryTableRecord,
+  BangusSupplierDeliveryTableRecord,
+  BangusSupplierProductRecord,
 } from "@/types/bangus";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function BangusBackofficePage() {
-  const session = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const session = await verifyOrbWeaverSession(token);
 
-  if (!(await verifyOrbWeaverSession(session))) {
+  if (!session || (session.role !== "ADMIN" && session.role !== "SUPPLIER")) {
     redirect("/vroombroom/backoffice/login");
   }
+
+  const isSupplier = session.role === "SUPPLIER";
 
   let databaseError = "";
   let catalog: BangusCatalogRecord = { products: [], categories: [] };
   let deliveryTables: BangusDeliveryTableRecord[] = [];
+  let supplierProducts: BangusSupplierProductRecord[] = [];
+  let supplierDeliveryTables: BangusSupplierDeliveryTableRecord[] = [];
 
   try {
-    [catalog, deliveryTables] = await Promise.all([
-      listBangusCatalog(),
-      listBangusDeliveryTables(),
-    ]);
+    if (isSupplier) {
+      [supplierProducts, supplierDeliveryTables] = await Promise.all([
+        listBangusSupplierProducts(),
+        listBangusSupplierDeliveryTables(),
+      ]);
+    } else {
+      [catalog, deliveryTables] = await Promise.all([
+        listBangusCatalog(),
+        listBangusDeliveryTables(),
+      ]);
+    }
   } catch (error) {
     console.error("Unable to load Bangus catalog", error);
     databaseError =
@@ -59,14 +80,16 @@ export default async function BangusBackofficePage() {
           </div>
 
           <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-            <Link
-              href="/vroombroom/backoffice"
-              aria-label="Back to VroomBroom"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold text-stone-400 transition hover:bg-white/[0.04] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto sm:gap-2 sm:px-3"
-            >
-              <FaArrowLeft aria-hidden="true" />
-              <span className="sr-only sm:not-sr-only">VroomBroom</span>
-            </Link>
+            {!isSupplier && (
+              <Link
+                href="/vroombroom/backoffice"
+                aria-label="Back to VroomBroom"
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl text-sm font-semibold text-stone-400 transition hover:bg-white/[0.04] hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300 sm:w-auto sm:gap-2 sm:px-3"
+              >
+                <FaArrowLeft aria-hidden="true" />
+                <span className="sr-only sm:not-sr-only">VroomBroom</span>
+              </Link>
+            )}
             <OrbWeaverLogoutButton compactOnMobile />
           </div>
         </div>
@@ -74,13 +97,16 @@ export default async function BangusBackofficePage() {
 
       <main className="mx-auto min-w-0 max-w-[96rem] px-3 pb-24 pt-3 sm:px-8 sm:py-10">
         <div className="mb-8 hidden sm:block">
-          <p className="text-sm text-stone-500">Back-office overview</p>
+          <p className="text-sm text-stone-500">
+            {isSupplier ? "Read-only supplier access" : "Back-office overview"}
+          </p>
           <h2 className="mt-2 text-2xl font-semibold tracking-tight text-white sm:text-3xl">
-            Products and orders, kept simple.
+            {isSupplier ? "Orders to prepare." : "Products and orders, kept simple."}
           </h2>
           <p className="mt-3 max-w-2xl leading-7 text-stone-400">
-            Maintain the products, pack sizes, flavors, and pricing used by
-            your Bangus business.
+            {isSupplier
+              ? "Review customer order quantities and repacking progress."
+              : "Maintain the products, pack sizes, flavors, and pricing used by your Bangus business."}
           </p>
         </div>
 
@@ -98,10 +124,17 @@ export default async function BangusBackofficePage() {
             </p>
           </section>
         ) : (
-          <BangusDashboard
-            initialCatalog={catalog}
-            initialDeliveryTables={deliveryTables}
-          />
+          isSupplier ? (
+            <SupplierOrdersDashboard
+              products={supplierProducts}
+              deliveryTables={supplierDeliveryTables}
+            />
+          ) : (
+            <BangusDashboard
+              initialCatalog={catalog}
+              initialDeliveryTables={deliveryTables}
+            />
+          )
         )}
       </main>
     </div>

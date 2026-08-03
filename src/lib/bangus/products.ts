@@ -3,6 +3,7 @@ import type {
   BangusCatalogRecord,
   BangusProductInput,
   BangusProductRecord,
+  BangusSupplierProductRecord,
 } from "@/types/bangus";
 
 const productInclude = {
@@ -75,6 +76,16 @@ export const listBangusCatalog = async (): Promise<BangusCatalogRecord> => {
     ),
     categories: categories.map((category) => category.name),
   };
+};
+
+export const listBangusSupplierProducts = async (): Promise<
+  BangusSupplierProductRecord[]
+> => {
+  const database = getBangusDatabase();
+  return database.bangusProduct.findMany({
+    select: { id: true, name: true, sizePack: true, flavor: true, pieces: true },
+    orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+  });
 };
 
 export const createBangusProduct = async (

@@ -1,5 +1,10 @@
 import type { BangusProductRecord } from "@/types/bangus";
 
+type ProductLabel = Pick<
+  BangusProductRecord,
+  "name" | "sizePack" | "flavor" | "pieces"
+>;
+
 const initials = (value: string) =>
   value
     .split(/\s+/)
@@ -16,7 +21,7 @@ const abbreviatePieces = (value: string) =>
     .replace(/DOZEN/g, "DZ");
 
 export const getBangusProductAbbreviation = (
-  product: BangusProductRecord
+  product: ProductLabel
 ) => {
   const parts = [initials(product.name)];
 
@@ -29,7 +34,7 @@ export const getBangusProductAbbreviation = (
   return parts.join(" · ");
 };
 
-export const getBangusProductFullLabel = (product: BangusProductRecord) =>
+export const getBangusProductFullLabel = (product: ProductLabel) =>
   [
     product.name,
     product.sizePack,

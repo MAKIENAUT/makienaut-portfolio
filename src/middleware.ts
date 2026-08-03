@@ -19,16 +19,32 @@ export async function middleware(request: NextRequest) {
   }
 
   const sessionToken = request.cookies.get(ORB_WEAVER_SESSION_COOKIE)?.value;
-  const hasSession = await verifyOrbWeaverSession(sessionToken);
+  const session = await verifyOrbWeaverSession(sessionToken);
   const loginPath = "/vroombroom/backoffice/login";
   const dashboardPath = "/vroombroom/backoffice";
 
-  if (isLoginPath(pathname) && hasSession) {
-    return NextResponse.redirect(new URL(dashboardPath, request.url));
+  if (isLoginPath(pathname) && session) {
+    return NextResponse.redirect(
+      new URL(
+        session.role === "SUPPLIER"
+          ? "/vroombroom/backoffice/bangus"
+          : dashboardPath,
+        request.url
+      )
+    );
   }
 
-  if (!isLoginPath(pathname) && !hasSession) {
+  if (!isLoginPath(pathname) && !session) {
     return NextResponse.redirect(new URL(loginPath, request.url));
+  }
+
+  if (
+    session?.role === "SUPPLIER" &&
+    pathname !== "/vroombroom/backoffice/bangus"
+  ) {
+    return NextResponse.redirect(
+      new URL("/vroombroom/backoffice/bangus", request.url)
+    );
   }
 
   return NextResponse.next();

@@ -16,10 +16,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function OrbWeaverBackofficePage() {
-  const session = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const session = await verifyOrbWeaverSession(token);
 
-  if (!(await verifyOrbWeaverSession(session))) {
+  if (!session) {
     redirect("/vroombroom/backoffice/login");
+  }
+
+  if (session.role === "SUPPLIER") {
+    redirect("/vroombroom/backoffice/bangus");
   }
 
   let databaseError = "";

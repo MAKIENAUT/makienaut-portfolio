@@ -2,6 +2,7 @@
 
 import { FormEvent, useCallback, useMemo, useState } from "react";
 import {
+  FaChartBar,
   FaCalendarAlt,
   FaEdit,
   FaEllipsisH,
@@ -17,6 +18,7 @@ import {
 import { OrderDetailsModal } from "@/components/bangus/OrderDetailsModal";
 import { OrderFormModal } from "@/components/bangus/OrderFormModal";
 import { PaymentMethodPicker } from "@/components/bangus/PaymentMethodPicker";
+import { ProductMetricsModal } from "@/components/bangus/ProductMetricsModal";
 import {
   getBangusProductAbbreviation,
   getBangusProductFullLabel,
@@ -27,6 +29,7 @@ import {
   type BangusOrderInput,
   type BangusOrderRecord,
   type BangusPaymentMethod,
+  type BangusProductMetric,
   type BangusProductRecord,
 } from "@/types/bangus";
 
@@ -103,6 +106,10 @@ export function OrdersTab({
   const [receiptStatusFilter, setReceiptStatusFilter] =
     useState<ReceiptStatusFilter>("ALL");
   const [showSupplierPrices, setShowSupplierPrices] = useState(true);
+  const [productMetrics, setProductMetrics] = useState<
+    BangusProductMetric[] | null
+  >(null);
+  const [isLoadingMetrics, setIsLoadingMetrics] = useState(false);
 
   const selectedTable =
     deliveryTables.find((table) => table.id === selectedTableId) ??
@@ -454,6 +461,61 @@ export function OrdersTab({
     setIsOrderFormOpen(true);
   };
 
+  const openProductMetrics = async () => {
+    if (!selectedTable) return;
+
+    setIsLoadingMetrics(true);
+    setError("");
+
+    try {
+      const response = await fetch(
+        `/api/bangus/backoffice/delivery-tables/${selectedTable.id}/metrics`,
+        { cache: "no-store" }
+      );
+      const result = (await response.json()) as {
+        metrics?: BangusProductMetric[];
+        message?: string;
+      };
+
+      if (!response.ok || !result.metrics) {
+        throw new Error(result.message || "Product metrics could not be loaded.");
+      }
+
+      setProductMetrics(result.metrics);
+    } catch (metricsError) {
+      setError(
+        metricsError instanceof Error
+          ? metricsError.message
+          : "Product metrics could not be loaded."
+      );
+    } finally {
+      setIsLoadingMetrics(false);
+    }
+  };
+
+  const saveProductShortages = async (shortQuantities: Record<string, number>) => {
+    if (!selectedTable) throw new Error("Choose a delivery table first.");
+
+    const response = await fetch(
+      `/api/bangus/backoffice/delivery-tables/${selectedTable.id}/metrics`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ shortQuantities }),
+      }
+    );
+    const result = (await response.json()) as {
+      metrics?: BangusProductMetric[];
+      message?: string;
+    };
+
+    if (!response.ok || !result.metrics) {
+      throw new Error(result.message || "Product metrics could not be saved.");
+    }
+
+    setProductMetrics(result.metrics);
+  };
+
   const exportSupplierOrder = () => {
     if (!selectedTable || selectedTable.orders.length === 0) return;
 
@@ -527,6 +589,20 @@ export function OrdersTab({
                 >
                   <FaPlus aria-hidden="true" />
                   Add order
+                </button>
+              )}
+              {selectedTable && (
+                <button
+                  type="button"
+                  onClick={() => void openProductMetrics()}
+                  disabled={isLoadingMetrics}
+                  title="Product metrics"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-amber-300/30 text-sm text-amber-200 transition hover:bg-amber-300/10 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
+                >
+                  <FaChartBar aria-hidden="true" />
+                  <span className="sr-only sm:not-sr-only">
+                    {isLoadingMetrics ? "Loading…" : "Product metrics"}
+                  </span>
                 </button>
               )}
               <button
@@ -1205,6 +1281,16 @@ export function OrdersTab({
           products={products}
           onClose={() => setIsOrderFormOpen(false)}
           onSave={saveOrder}
+        />
+      )}
+
+      {productMetrics && selectedTable && (
+        <ProductMetricsModal
+          products={products}
+          metrics={productMetrics}
+          tableName={selectedTable.name}
+          onClose={() => setProductMetrics(null)}
+          onSave={saveProductShortages}
         />
       )}
     </>

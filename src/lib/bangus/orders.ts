@@ -5,6 +5,7 @@ import type {
   BangusOrderItemRecord,
   BangusOrderRecord,
   BangusPaymentMethod,
+  BangusSupplierDeliveryTableRecord,
 } from "@/types/bangus";
 
 const orderInclude = {
@@ -136,6 +137,34 @@ export const listBangusDeliveryTables = async () => {
   return tables.map((table) =>
     serializeDeliveryTable(table as unknown as StoredDeliveryTable)
   );
+};
+
+export const listBangusSupplierDeliveryTables = async (): Promise<
+  BangusSupplierDeliveryTableRecord[]
+> => {
+  const database = getBangusDatabase();
+  const tables = await database.bangusDeliveryTable.findMany({
+    select: {
+      id: true,
+      name: true,
+      deliveryDate: true,
+      orders: {
+        select: {
+          id: true,
+          customerName: true,
+          repacked: true,
+          items: { select: { productId: true, quantity: true } },
+        },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      },
+    },
+    orderBy: [{ deliveryDate: "desc" }, { name: "asc" }],
+  });
+
+  return tables.map((table) => ({
+    ...table,
+    deliveryDate: table.deliveryDate.toISOString().slice(0, 10),
+  }));
 };
 
 export const createBangusDeliveryTable = async (

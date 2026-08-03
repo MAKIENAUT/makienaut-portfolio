@@ -7,7 +7,7 @@ const encoder = new TextEncoder();
 
 interface SessionPayload {
   sub: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "SUPPLIER" | "USER";
   iat: number;
   exp: number;
   iss: typeof issuer;
@@ -61,7 +61,7 @@ const getSigningKey = async () => {
 
 export const createOrbWeaverSession = async (user: {
   id: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "SUPPLIER" | "USER";
 }) => {
   const now = Math.floor(Date.now() / 1000);
   const header = encodeBase64Url(
@@ -86,16 +86,23 @@ export const createOrbWeaverSession = async (user: {
   return `${unsignedToken}.${encodeBase64Url(new Uint8Array(signature))}`;
 };
 
-export const verifyOrbWeaverSession = async (token?: string) => {
+export type OrbWeaverSession = {
+  userId: string;
+  role: SessionPayload["role"];
+};
+
+export const verifyOrbWeaverSession = async (
+  token?: string
+): Promise<OrbWeaverSession | null> => {
   if (!token || token.length > 2048) {
-    return false;
+    return null;
   }
 
   try {
     const [header, encodedPayload, signature] = token.split(".");
 
     if (!header || !encodedPayload || !signature) {
-      return false;
+      return null;
     }
 
     const parsedHeader = JSON.parse(decodeBase64Url(header)) as {
@@ -104,7 +111,7 @@ export const verifyOrbWeaverSession = async (token?: string) => {
     };
 
     if (parsedHeader.alg !== "HS256" || parsedHeader.typ !== "JWT") {
-      return false;
+      return null;
     }
 
     const unsignedToken = `${header}.${encodedPayload}`;
@@ -128,7 +135,7 @@ export const verifyOrbWeaverSession = async (token?: string) => {
     );
 
     if (!isValidSignature) {
-      return false;
+      return null;
     }
 
     const payload = JSON.parse(
@@ -139,15 +146,19 @@ export const verifyOrbWeaverSession = async (token?: string) => {
     return (
       typeof payload.sub === "string" &&
       payload.sub.length > 0 &&
-      (payload.role === "ADMIN" || payload.role === "USER") &&
+      (payload.role === "ADMIN" ||
+        payload.role === "SUPPLIER" ||
+        payload.role === "USER") &&
       payload.iss === issuer &&
       payload.aud === audience &&
       typeof payload.iat === "number" &&
       payload.iat <= now + 60 &&
       typeof payload.exp === "number" &&
       payload.exp > now
-    );
+    )
+      ? { userId: payload.sub, role: payload.role }
+      : null;
   } catch {
-    return false;
+    return null;
   }
 };

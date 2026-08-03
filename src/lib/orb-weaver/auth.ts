@@ -7,13 +7,15 @@ import {
 
 export type OrbWeaverAuthenticatedUser = {
   id: string;
-  role: "ADMIN" | "USER";
+  role: "ADMIN" | "SUPPLIER" | "USER";
 };
 
 const normalizeUsername = (username: string) => username.trim().toLowerCase();
 
-const hasMatchingBootstrapPassword = (password: string) => {
-  const bootstrapPassword = process.env.ORBW_BOOTSTRAP_ADMIN_PASSWORD;
+const hasMatchingBootstrapPassword = (
+  password: string,
+  bootstrapPassword?: string
+) => {
 
   if (!bootstrapPassword || password.length !== bootstrapPassword.length) {
     return false;
@@ -39,22 +41,36 @@ export const authenticateOrbWeaverUser = async (
   });
 
   if (!user) {
-    const bootstrapUsername = normalizeUsername(
-      process.env.ORBW_BOOTSTRAP_ADMIN_USERNAME || "admin"
+    const bootstrapAccount = [
+      {
+        username: normalizeUsername(
+          process.env.ORBW_BOOTSTRAP_ADMIN_USERNAME || "admin"
+        ),
+        password: process.env.ORBW_BOOTSTRAP_ADMIN_PASSWORD,
+        role: "ADMIN" as const,
+      },
+      {
+        username: normalizeUsername(
+          process.env.ORBW_BOOTSTRAP_SUPPLIER_USERNAME || "jhe_mararac"
+        ),
+        password: process.env.ORBW_BOOTSTRAP_SUPPLIER_PASSWORD,
+        role: "SUPPLIER" as const,
+      },
+    ].find(
+      (account) =>
+        account.username === normalizedUsername &&
+        hasMatchingBootstrapPassword(password, account.password)
     );
 
-    if (
-      normalizedUsername !== bootstrapUsername ||
-      !hasMatchingBootstrapPassword(password)
-    ) {
+    if (!bootstrapAccount) {
       return null;
     }
 
     const createdUser = await database.orbWeaverUser.create({
       data: {
-        username: bootstrapUsername,
+        username: bootstrapAccount.username,
         passwordHash: await hashOrbWeaverPassword(password),
-        role: "ADMIN",
+        role: bootstrapAccount.role,
       },
       select: { id: true, role: true },
     });

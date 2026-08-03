@@ -23,13 +23,16 @@ export function OrbWeaverLoginForm() {
           password: formData.get("password"),
         }),
       });
-      const result = (await response.json()) as { message?: string };
+      const result = (await response.json()) as {
+        message?: string;
+        destination?: string;
+      };
 
       if (!response.ok) {
         throw new Error(result.message || "Sign-in failed.");
       }
 
-      window.location.assign("/vroombroom/backoffice");
+      window.location.assign(result.destination || "/vroombroom/backoffice");
     } catch (submissionError) {
       setError(
         submissionError instanceof Error

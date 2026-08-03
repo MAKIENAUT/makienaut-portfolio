@@ -50,10 +50,7 @@ export async function POST(request: NextRequest) {
 
     const user = await authenticateOrbWeaverUser(username, password);
 
-    // The back-office is intentionally restricted to administrator accounts.
-    // Customer-facing users can later use the same database table without
-    // receiving access to these management routes.
-    if (!user || user.role !== "ADMIN") {
+    if (!user || (user.role !== "ADMIN" && user.role !== "SUPPLIER")) {
       if (sourceFingerprint) {
         await recordOrbWeaverLoginFailure(sourceFingerprint);
       }
@@ -66,7 +63,13 @@ export async function POST(request: NextRequest) {
     }
 
     const session = await createOrbWeaverSession(user);
-    const response = NextResponse.json({ message: "Signed in." });
+    const response = NextResponse.json({
+      message: "Signed in.",
+      destination:
+        user.role === "SUPPLIER"
+          ? "/vroombroom/backoffice/bangus"
+          : "/vroombroom/backoffice",
+    });
 
     response.cookies.set(ORB_WEAVER_SESSION_COOKIE, session, {
       httpOnly: true,

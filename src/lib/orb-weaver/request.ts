@@ -26,10 +26,10 @@ export const isSameOriginRequest = (request: NextRequest) => {
   }
 };
 
-export const isOrbWeaverAuthenticated = (request: NextRequest) =>
-  verifyOrbWeaverSession(
+export const isOrbWeaverAuthenticated = async (request: NextRequest) =>
+  (await verifyOrbWeaverSession(
     request.cookies.get(ORB_WEAVER_SESSION_COOKIE)?.value
-  );
+  ))?.role === "ADMIN";
 
 export const getOrbWeaverRequestFingerprint = (
   request: NextRequest,

@@ -13,10 +13,15 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 export default async function OrbWeaverBackofficeLoginPage() {
-  const session = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const token = (await cookies()).get(ORB_WEAVER_SESSION_COOKIE)?.value;
+  const session = await verifyOrbWeaverSession(token);
 
-  if (await verifyOrbWeaverSession(session)) {
-    redirect("/vroombroom/backoffice");
+  if (session) {
+    redirect(
+      session.role === "SUPPLIER"
+        ? "/vroombroom/backoffice/bangus"
+        : "/vroombroom/backoffice"
+    );
   }
 
   return (

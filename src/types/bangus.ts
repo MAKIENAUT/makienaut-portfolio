@@ -71,3 +71,32 @@ export interface BangusDeliveryTableRecord {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface BangusProductMetric {
+  productId: string;
+  orderedQuantity: number;
+  shortQuantity: number;
+  receivedQuantity: number;
+  repackedQuantity: number;
+  onHandQuantity: number;
+}
+
+export interface BangusSupplierProductRecord {
+  id: string;
+  name: string;
+  sizePack: string;
+  flavor: string | null;
+  pieces: string | null;
+}
+
+export interface BangusSupplierDeliveryTableRecord {
+  id: string;
+  name: string;
+  deliveryDate: string;
+  orders: Array<{
+    id: string;
+    customerName: string;
+    repacked: boolean;
+    items: Array<{ productId: string; quantity: number }>;
+  }>;
+}

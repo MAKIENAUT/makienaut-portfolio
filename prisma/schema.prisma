@@ -24,6 +24,7 @@ enum BangusPaymentMethod {
 
 enum OrbWeaverUserRole {
   ADMIN
+  SUPPLIER
   USER
 }
 
@@ -112,6 +113,7 @@ model BangusProduct {
   createdAt     DateTime              @default(now()) @db.Timestamptz(3)
   updatedAt     DateTime              @updatedAt @db.Timestamptz(3)
   orderItems    BangusOrderItem[]
+  shortages     BangusProductShortage[]
 
   @@index([isActive, sortOrder])
   @@index([categoryId, sortOrder])
@@ -125,6 +127,7 @@ model BangusDeliveryTable {
   createdAt    DateTime      @default(now()) @db.Timestamptz(3)
   updatedAt    DateTime      @updatedAt @db.Timestamptz(3)
   orders       BangusOrder[]
+  shortages    BangusProductShortage[]
 
   @@index([deliveryDate])
   @@map("bangus_delivery_tables")
@@ -163,4 +166,19 @@ model BangusOrderItem {
   @@unique([orderId, productId])
   @@index([productId])
   @@map("bangus_order_items")
+}
+
+model BangusProductShortage {
+  id              String              @id @default(uuid()) @db.Uuid
+  deliveryTableId String              @db.Uuid
+  deliveryTable   BangusDeliveryTable @relation(fields: [deliveryTableId], references: [id], onDelete: Cascade)
+  productId       String              @db.Uuid
+  product         BangusProduct       @relation(fields: [productId], references: [id], onDelete: Restrict)
+  shortQuantity   Int                 @default(0)
+  createdAt       DateTime            @default(now()) @db.Timestamptz(3)
+  updatedAt       DateTime            @updatedAt @db.Timestamptz(3)
+
+  @@unique([deliveryTableId, productId])
+  @@index([productId])
+  @@map("bangus_product_shortages")
 }
