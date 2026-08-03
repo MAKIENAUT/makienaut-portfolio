@@ -97,6 +97,23 @@ const getFlavorClasses = (flavor: string | null | undefined) => {
   return "border-white/10 bg-white/[0.03] text-stone-200";
 };
 
+const getFlavorAccentClasses = (flavor: string | null | undefined) => {
+  const normalizedFlavor = flavor?.trim().toLowerCase() ?? "";
+
+  if (normalizedFlavor.includes("spicy")) return "border-l-red-400";
+  if (normalizedFlavor.includes("regular")) return "border-l-blue-400";
+  if (normalizedFlavor.includes("sweet")) return "border-l-amber-300";
+  if (normalizedFlavor.includes("garlic")) return "border-l-violet-300";
+  if (
+    normalizedFlavor.includes("original") ||
+    normalizedFlavor.includes("plain")
+  ) {
+    return "border-l-emerald-300";
+  }
+
+  return "border-l-stone-600";
+};
+
 const getManilaDate = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
@@ -968,7 +985,7 @@ export function OrdersTab({
                               disabled={isBusy}
                               onClick={() => openEditOrder(order)}
                               aria-label={`Edit ${order.customerName}'s order`}
-                              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-500 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
                             >
                               <FaEdit aria-hidden="true" />
                             </button>
@@ -977,7 +994,7 @@ export function OrdersTab({
                               disabled={isBusy}
                               onClick={() => void deleteOrder(order)}
                               aria-label={`Remove ${order.customerName}'s order`}
-                              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
                             >
                               <FaTrash aria-hidden="true" />
                             </button>
@@ -1009,8 +1026,8 @@ export function OrdersTab({
 
                       {isExpanded && (
                         <div id={`mobile-order-${order.id}`} className="mt-3 space-y-3">
-                          <div className={`grid gap-1.5 ${isSupplier ? "grid-cols-2" : "grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)]"}`}>
-                            <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked && hasShortage ? "border-rose-300/40 bg-rose-300/10 text-rose-100" : order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
+                          <div className="grid grid-cols-2 gap-2">
+                            <label className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${order.repacked && hasShortage ? "border-rose-300/35 bg-rose-300/[0.08] text-rose-100" : order.repacked ? "border-amber-300/30 bg-amber-300/[0.07] text-amber-100" : "border-white/10 bg-black/10 text-stone-400"}`}>
                               <input
                                 type="checkbox"
                                 checked={order.repacked}
@@ -1022,9 +1039,14 @@ export function OrdersTab({
                                 }
                                 className={`h-3.5 w-3.5 ${order.repacked && hasShortage ? "accent-rose-300" : "accent-amber-300"}`}
                               />
-                              {order.repacked && hasShortage ? "Repacked · Short" : "Repacked"}
+                              <span>Repacked</span>
+                              {order.repacked && hasShortage && (
+                                <span className="ml-auto rounded-full bg-rose-300/15 px-1.5 py-0.5 text-[0.58rem] font-bold uppercase tracking-wide text-rose-200">
+                                  Short
+                                </span>
+                              )}
                             </label>
-                            <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
+                            <label className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${order.received ? "border-violet-300/30 bg-violet-300/[0.07] text-violet-100" : "border-white/10 bg-black/10 text-stone-400"}`}>
                               <input
                                 type="checkbox"
                                 checked={order.received}
@@ -1039,7 +1061,7 @@ export function OrdersTab({
                               Received
                             </label>
                             {!isSupplier && (
-                              <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
+                              <label className={`flex min-h-11 cursor-pointer items-center gap-2 rounded-lg border px-3 text-xs font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/[0.07] text-cyan-100" : "border-white/10 bg-black/10 text-stone-400"}`}>
                                 <input
                                   type="checkbox"
                                   checked={order.paid}
@@ -1065,7 +1087,7 @@ export function OrdersTab({
                             )}
                           </div>
 
-                          <div className="space-y-2">
+                          <div className="overflow-hidden rounded-xl border border-white/[0.08] bg-black/15">
                             {orderedItems.map((item) => {
                               const product = productColumns.find(
                                 (candidate) => candidate.id === item.productId
@@ -1074,24 +1096,29 @@ export function OrdersTab({
                               return (
                                 <div
                                   key={item.productId}
-                                  className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${getFlavorClasses(product?.flavor)}`}
+                                  className={`flex items-center justify-between gap-3 border-b border-l-2 border-b-white/[0.06] px-3 py-3 last:border-b-0 ${getFlavorAccentClasses(product?.flavor)}`}
                                 >
                                   <div className="min-w-0">
-                                    <p className="break-words text-sm font-semibold">
-                                      {product
-                                        ? getBangusProductFullLabel(product)
-                                        : "Unavailable product"}
+                                    <p className="break-words text-sm font-semibold leading-5 text-stone-100">
+                                      {product?.name ?? "Unavailable product"}
                                     </p>
-                                    {product?.flavor && (
-                                      <span className="mt-1.5 inline-flex rounded-full border border-current/20 px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide">
-                                        {product.flavor}
-                                      </span>
+                                    {product && (
+                                      <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[0.65rem] text-stone-500">
+                                        <span>{product.sizePack}</span>
+                                        {product.flavor && (
+                                          <span className={`inline-flex rounded-full border px-2 py-0.5 font-bold uppercase tracking-wide ${getFlavorClasses(product.flavor)}`}>
+                                            {product.flavor}
+                                          </span>
+                                        )}
+                                        {product.pieces && <span>· {product.pieces}</span>}
+                                      </div>
                                     )}
                                   </div>
                                   <div className="shrink-0 text-right tabular-nums">
-                                    <p className="text-sm font-bold">{item.quantity} ordered</p>
+                                    <p className="text-base font-bold text-white">×{item.quantity}</p>
+                                    <p className="text-[0.6rem] uppercase tracking-wide text-stone-600">ordered</p>
                                     {item.shortQuantity > 0 && (
-                                      <p className="mt-1 text-xs font-bold text-red-300">
+                                      <p className="mt-1 text-[0.68rem] font-bold text-rose-300">
                                         {item.shortQuantity} short
                                       </p>
                                     )}
@@ -1101,13 +1128,15 @@ export function OrdersTab({
                             })}
                           </div>
 
-                          <button
-                            type="button"
-                            onClick={() => setViewingOrderId(order.id)}
-                            className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-white/10 text-xs font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
-                          >
-                            View full order details
-                          </button>
+                          <div className="flex justify-end">
+                            <button
+                              type="button"
+                              onClick={() => setViewingOrderId(order.id)}
+                              className="inline-flex min-h-9 items-center justify-center rounded-lg px-2 text-xs font-semibold text-cyan-200 transition hover:bg-cyan-300/10 hover:text-cyan-100"
+                            >
+                              View details
+                            </button>
+                          </div>
                         </div>
                       )}
                     </article>
