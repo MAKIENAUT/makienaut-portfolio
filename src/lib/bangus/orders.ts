@@ -238,13 +238,17 @@ export const updateBangusOrderStatus = async (
   }
 ) => {
   const database = getBangusDatabase();
-  const order = await database.bangusOrder.update({
+  return database.bangusOrder.update({
     where: { id },
     data: status,
-    include: orderInclude,
+    select: {
+      id: true,
+      repacked: true,
+      received: true,
+      paid: true,
+      paymentMethod: true,
+    },
   });
-
-  return serializeOrder(order as unknown as StoredOrder);
 };
 
 export const deleteBangusOrder = async (id: string) => {

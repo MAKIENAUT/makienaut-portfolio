@@ -354,8 +354,20 @@ export function OrdersTab({
       changes.paymentMethod === undefined
         ? (changes.paid ?? order.paid)
         : paymentMethod !== null;
+    const optimisticOrder: BangusOrderRecord = {
+      ...order,
+      repacked: changes.repacked ?? order.repacked,
+      received: changes.received ?? order.received,
+      paid,
+      paymentMethod,
+    };
 
     try {
+      // Reflect simple checkbox and payment changes immediately. The API still
+      // persists and confirms the update, but the dashboard does not wait on a
+      // network round trip before responding to the operator.
+      replaceOrder(optimisticOrder);
+
       const response = await fetch(
         `/api/bangus/backoffice/orders/${order.id}`,
         {
@@ -370,14 +382,18 @@ export function OrdersTab({
         }
       );
       const result = (await response.json()) as {
-        order?: BangusOrderRecord;
+        order?: Pick<
+          BangusOrderRecord,
+          "id" | "repacked" | "received" | "paid" | "paymentMethod"
+        >;
         message?: string;
       };
       if (!response.ok || !result.order) {
         throw new Error(result.message || "Order status could not be updated.");
       }
-      replaceOrder(result.order);
+      replaceOrder({ ...optimisticOrder, ...result.order });
     } catch (updateError) {
+      replaceOrder(order);
       setError(
         updateError instanceof Error
           ? updateError.message
