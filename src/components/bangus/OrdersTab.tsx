@@ -4,6 +4,8 @@ import { FormEvent, useCallback, useMemo, useState } from "react";
 import {
   FaChartBar,
   FaCalendarAlt,
+  FaChevronDown,
+  FaChevronUp,
   FaEdit,
   FaEllipsisH,
   FaEye,
@@ -70,6 +72,31 @@ const formatTableLabel = (table: BangusDeliveryTableRecord) =>
 const hasOrderShortage = (order: BangusOrderRecord) =>
   order.items.some((item) => item.shortQuantity > 0);
 
+const getFlavorClasses = (flavor: string | null | undefined) => {
+  const normalizedFlavor = flavor?.trim().toLowerCase() ?? "";
+
+  if (normalizedFlavor.includes("spicy")) {
+    return "border-red-400/30 bg-red-400/10 text-red-100";
+  }
+  if (normalizedFlavor.includes("regular")) {
+    return "border-blue-400/30 bg-blue-400/10 text-blue-100";
+  }
+  if (normalizedFlavor.includes("sweet")) {
+    return "border-amber-300/30 bg-amber-300/10 text-amber-100";
+  }
+  if (normalizedFlavor.includes("garlic")) {
+    return "border-violet-300/30 bg-violet-300/10 text-violet-100";
+  }
+  if (
+    normalizedFlavor.includes("original") ||
+    normalizedFlavor.includes("plain")
+  ) {
+    return "border-emerald-300/30 bg-emerald-300/10 text-emerald-100";
+  }
+
+  return "border-white/10 bg-white/[0.03] text-stone-200";
+};
+
 const getManilaDate = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone: "Asia/Manila",
@@ -106,6 +133,9 @@ export function OrdersTab({
     null
   );
   const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
+  const [expandedMobileOrderIds, setExpandedMobileOrderIds] = useState<
+    Set<string>
+  >(() => new Set());
   const [orderQuery, setOrderQuery] = useState("");
   const [paymentStatusFilter, setPaymentStatusFilter] =
     useState<PaymentStatusFilter>("ALL");
@@ -559,6 +589,7 @@ export function OrdersTab({
                     onChange={(event) => {
                       setSelectedTableId(event.target.value);
                       setViewingOrderId(null);
+                      setExpandedMobileOrderIds(new Set());
                     }}
                     className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:min-h-11 sm:w-64 sm:rounded-xl"
                   >
@@ -871,145 +902,214 @@ export function OrdersTab({
               </div>
             ) : (
               <>
-              <div className="divide-y divide-white/[0.08] md:hidden">
+              <div className="space-y-2 p-2 md:hidden">
                 {filteredOrders.map((order) => {
                   const isBusy = busyOrderId === order.id;
                   const hasShortage = hasOrderShortage(order);
+                  const isExpanded = expandedMobileOrderIds.has(order.id);
                   const orderedItems = order.items.filter(
                     (item) => item.quantity > 0
                   );
+                  const itemCount = orderedItems.reduce(
+                    (total, item) => total + item.quantity,
+                    0
+                  );
 
                   return (
-                    <article key={order.id} className="p-3">
+                    <article
+                      key={order.id}
+                      className={`rounded-xl border p-3 transition ${isExpanded ? "border-cyan-300/20 bg-cyan-300/[0.035]" : "border-white/[0.08] bg-black/10"}`}
+                    >
                       <div className="flex items-start gap-2">
                         <button
                           type="button"
-                          onClick={() => setViewingOrderId(order.id)}
-                          className="min-w-0 flex-1 text-left underline-offset-4 transition hover:text-cyan-200 hover:underline focus-visible:text-cyan-200"
+                          aria-expanded={isExpanded}
+                          aria-controls={`mobile-order-${order.id}`}
+                          onClick={() =>
+                            setExpandedMobileOrderIds((current) => {
+                              const next = new Set(current);
+                              if (next.has(order.id)) next.delete(order.id);
+                              else next.add(order.id);
+                              return next;
+                            })
+                          }
+                          className="flex min-w-0 flex-1 items-center gap-2 rounded-lg text-left transition hover:text-cyan-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-cyan-300/40"
                         >
-                          <span className="block truncate text-sm font-semibold text-white">
-                            {order.customerName}
+                          <span className="min-w-0 flex-1">
+                            <span className="block truncate text-sm font-semibold text-white">
+                              {order.customerName}
+                            </span>
+                            <span className="mt-0.5 block text-[0.65rem] text-stone-500">
+                              {itemCount} item{itemCount === 1 ? "" : "s"} · {isExpanded ? "Tap to collapse" : "Tap to expand"}
+                            </span>
                           </span>
-                          <span className="mt-0.5 block text-[0.65rem] text-stone-500">
-                            {orderedItems.reduce((total, item) => total + item.quantity, 0)} item{orderedItems.reduce((total, item) => total + item.quantity, 0) === 1 ? "" : "s"} · Tap for details
-                          </span>
+                          {isExpanded ? (
+                            <FaChevronUp aria-hidden="true" className="shrink-0 text-cyan-300" />
+                          ) : (
+                            <FaChevronDown aria-hidden="true" className="shrink-0 text-stone-500" />
+                          )}
                         </button>
                         <div className="shrink-0 text-right">
-                          {!isSupplier && <p className="text-sm font-semibold tabular-nums text-emerald-300">
-                            {formatPeso(order.retailTotal)}
-                          </p>}
+                          {!isSupplier && (
+                            <p className="text-sm font-semibold tabular-nums text-emerald-300">
+                              {formatPeso(order.retailTotal)}
+                            </p>
+                          )}
                           {showSupplierPrices && (
                             <p className={`${isSupplier ? "text-sm font-semibold text-stone-300" : "text-[0.65rem] text-stone-500"} tabular-nums`}>
                               {formatPeso(order.supplierTotal)}{!isSupplier && " cost"}
                             </p>
                           )}
                         </div>
-                        {!isSupplier && <div className="flex shrink-0">
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() => openEditOrder(order)}
-                            aria-label={`Edit ${order.customerName}'s order`}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
-                          >
-                            <FaEdit aria-hidden="true" />
-                          </button>
-                          <button
-                            type="button"
-                            disabled={isBusy}
-                            onClick={() => void deleteOrder(order)}
-                            aria-label={`Remove ${order.customerName}'s order`}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
-                          >
-                            <FaTrash aria-hidden="true" />
-                          </button>
-                        </div>}
+                        {!isSupplier && (
+                          <div className="flex shrink-0">
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => openEditOrder(order)}
+                              aria-label={`Edit ${order.customerName}'s order`}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-400 transition hover:bg-cyan-300/10 hover:text-cyan-200 disabled:opacity-40"
+                            >
+                              <FaEdit aria-hidden="true" />
+                            </button>
+                            <button
+                              type="button"
+                              disabled={isBusy}
+                              onClick={() => void deleteOrder(order)}
+                              aria-label={`Remove ${order.customerName}'s order`}
+                              className="inline-flex h-10 w-10 items-center justify-center rounded-lg text-stone-600 transition hover:bg-red-300/10 hover:text-red-200 disabled:opacity-40"
+                            >
+                              <FaTrash aria-hidden="true" />
+                            </button>
+                          </div>
+                        )}
                       </div>
 
-                      <div className={`mt-2 grid gap-1.5 ${isSupplier ? "grid-cols-2" : "grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)]"}`}>
-                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked && hasShortage ? "border-rose-300/40 bg-rose-300/10 text-rose-100" : order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
-                          <input
-                            type="checkbox"
-                            checked={order.repacked}
-                            disabled={isBusy || isSupplier}
-                            onChange={(event) =>
-                              void updateStatus(order, {
-                                repacked: event.target.checked,
-                              })
-                            }
-                            className={`h-3.5 w-3.5 ${order.repacked && hasShortage ? "accent-rose-300" : "accent-amber-300"}`}
-                          />
-                          {order.repacked && hasShortage ? "Repacked · Short" : "Repacked"}
-                        </label>
-                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
-                          <input
-                            type="checkbox"
-                            checked={order.received}
-                            disabled={isBusy || isSupplier}
-                            onChange={(event) =>
-                              void updateStatus(order, {
-                                received: event.target.checked,
-                              })
-                            }
-                            className="h-3.5 w-3.5 accent-violet-300"
-                          />
-                          Received
-                        </label>
-                        {!isSupplier && <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
-                          <input
-                            type="checkbox"
-                            checked={order.paid}
-                            disabled={isBusy}
-                            onChange={(event) =>
-                              void updateStatus(order, { paid: event.target.checked })
-                            }
-                            className="h-3.5 w-3.5 accent-cyan-300"
-                          />
-                          Paid
-                        </label>}
-                        {!isSupplier && <PaymentMethodPicker
-                          value={order.paymentMethod}
-                          disabled={isBusy}
-                          onChange={(paymentMethod) =>
-                            void updateStatus(order, {
-                              paymentMethod,
-                            })
-                          }
-                          label={`${order.customerName} payment method`}
-                          compact
-                        />}
-                      </div>
+                      {!isExpanded && orderedItems.length > 0 && (
+                        <div className="bangus-chip-scroll mt-2 flex gap-1.5 overflow-x-auto">
+                          {orderedItems.map((item) => {
+                            const product = productColumns.find(
+                              (candidate) => candidate.id === item.productId
+                            );
 
-                      <div className="mt-2 min-w-0">
-                        {orderedItems.length > 0 ? (
-                          <div className="bangus-chip-scroll flex gap-1.5 overflow-x-auto">
+                            return (
+                              <span
+                                key={item.productId}
+                                className={`shrink-0 rounded-md border px-2 py-1 text-[0.65rem] ${item.shortQuantity > 0 ? "border-rose-300/30 bg-rose-300/10 text-rose-100" : getFlavorClasses(product?.flavor)}`}
+                              >
+                                {item.quantity} × {product
+                                  ? getBangusProductAbbreviation(product)
+                                  : "Unavailable product"}
+                                {item.shortQuantity > 0 && ` · ${item.shortQuantity} short`}
+                              </span>
+                            );
+                          })}
+                        </div>
+                      )}
+
+                      {isExpanded && (
+                        <div id={`mobile-order-${order.id}`} className="mt-3 space-y-3">
+                          <div className={`grid gap-1.5 ${isSupplier ? "grid-cols-2" : "grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)]"}`}>
+                            <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked && hasShortage ? "border-rose-300/40 bg-rose-300/10 text-rose-100" : order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
+                              <input
+                                type="checkbox"
+                                checked={order.repacked}
+                                disabled={isBusy || isSupplier}
+                                onChange={(event) =>
+                                  void updateStatus(order, {
+                                    repacked: event.target.checked,
+                                  })
+                                }
+                                className={`h-3.5 w-3.5 ${order.repacked && hasShortage ? "accent-rose-300" : "accent-amber-300"}`}
+                              />
+                              {order.repacked && hasShortage ? "Repacked · Short" : "Repacked"}
+                            </label>
+                            <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
+                              <input
+                                type="checkbox"
+                                checked={order.received}
+                                disabled={isBusy || isSupplier}
+                                onChange={(event) =>
+                                  void updateStatus(order, {
+                                    received: event.target.checked,
+                                  })
+                                }
+                                className="h-3.5 w-3.5 accent-violet-300"
+                              />
+                              Received
+                            </label>
+                            {!isSupplier && (
+                              <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.paid ? "border-cyan-300/30 bg-cyan-300/10 text-cyan-100" : "border-white/10 text-stone-400"}`}>
+                                <input
+                                  type="checkbox"
+                                  checked={order.paid}
+                                  disabled={isBusy}
+                                  onChange={(event) =>
+                                    void updateStatus(order, { paid: event.target.checked })
+                                  }
+                                  className="h-3.5 w-3.5 accent-cyan-300"
+                                />
+                                Paid
+                              </label>
+                            )}
+                            {!isSupplier && (
+                              <PaymentMethodPicker
+                                value={order.paymentMethod}
+                                disabled={isBusy}
+                                onChange={(paymentMethod) =>
+                                  void updateStatus(order, { paymentMethod })
+                                }
+                                label={`${order.customerName} payment method`}
+                                compact
+                              />
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
                             {orderedItems.map((item) => {
                               const product = productColumns.find(
                                 (candidate) => candidate.id === item.productId
                               );
 
                               return (
-                                <span
+                                <div
                                   key={item.productId}
-                                  title={product ? getBangusProductFullLabel(product) : "Unavailable product"}
-                                  className={`shrink-0 rounded-md border px-2 py-1 text-[0.65rem] ${item.shortQuantity > 0 ? "border-rose-300/30 bg-rose-300/10 text-rose-100" : "border-cyan-300/15 bg-cyan-300/[0.06] text-cyan-100"}`}
+                                  className={`flex items-start justify-between gap-3 rounded-xl border p-3 ${getFlavorClasses(product?.flavor)}`}
                                 >
-                                  {item.quantity} × {product
-                                    ? getBangusProductAbbreviation(product)
-                                    : "Unavailable product"}
-                                  {item.shortQuantity > 0 && (
-                                    <span className="ml-1 font-semibold text-rose-200">
-                                      · {item.shortQuantity} short
-                                    </span>
-                                  )}
-                                </span>
+                                  <div className="min-w-0">
+                                    <p className="break-words text-sm font-semibold">
+                                      {product
+                                        ? getBangusProductFullLabel(product)
+                                        : "Unavailable product"}
+                                    </p>
+                                    {product?.flavor && (
+                                      <span className="mt-1.5 inline-flex rounded-full border border-current/20 px-2 py-0.5 text-[0.62rem] font-bold uppercase tracking-wide">
+                                        {product.flavor}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="shrink-0 text-right tabular-nums">
+                                    <p className="text-sm font-bold">{item.quantity} ordered</p>
+                                    {item.shortQuantity > 0 && (
+                                      <p className="mt-1 text-xs font-bold text-red-300">
+                                        {item.shortQuantity} short
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
                               );
                             })}
                           </div>
-                        ) : (
-                          <p className="text-xs text-stone-500">No items added.</p>
-                        )}
-                      </div>
+
+                          <button
+                            type="button"
+                            onClick={() => setViewingOrderId(order.id)}
+                            className="inline-flex min-h-10 w-full items-center justify-center rounded-lg border border-white/10 text-xs font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200"
+                          >
+                            View full order details
+                          </button>
+                        </div>
+                      )}
                     </article>
                   );
                 })}
