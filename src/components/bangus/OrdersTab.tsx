@@ -35,6 +35,9 @@ interface OrdersTabProps {
   initialDeliveryTables: BangusDeliveryTableRecord[];
 }
 
+type PaymentStatusFilter = "ALL" | "PAID" | "UNPAID";
+type ReceiptStatusFilter = "ALL" | "RECEIVED" | "NOT_RECEIVED";
+
 const paymentLabels: Record<BangusPaymentMethod, string> = {
   GCASH: "GCash",
   CASH: "Cash",
@@ -95,6 +98,10 @@ export function OrdersTab({
   );
   const [viewingOrderId, setViewingOrderId] = useState<string | null>(null);
   const [orderQuery, setOrderQuery] = useState("");
+  const [paymentStatusFilter, setPaymentStatusFilter] =
+    useState<PaymentStatusFilter>("ALL");
+  const [receiptStatusFilter, setReceiptStatusFilter] =
+    useState<ReceiptStatusFilter>("ALL");
   const [showSupplierPrices, setShowSupplierPrices] = useState(true);
 
   const selectedTable =
@@ -108,23 +115,41 @@ export function OrdersTab({
 
   const filteredOrders = useMemo(() => {
     const normalizedQuery = orderQuery.trim().toLowerCase();
-    if (!normalizedQuery || !selectedTable) return selectedTable?.orders ?? [];
+    if (!selectedTable) return [];
 
-    return selectedTable.orders.filter((order) =>
-      [
-        order.customerName,
-        order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
-        order.paid ? "paid" : "unpaid",
-        order.received ? "received" : "not received",
-        ...order.items.map((item) => {
-          const product = productColumns.find(
-            (candidate) => candidate.id === item.productId
-          );
-          return product ? getBangusProductFullLabel(product) : "";
-        }),
-      ].some((value) => value.toLowerCase().includes(normalizedQuery))
-    );
-  }, [orderQuery, productColumns, selectedTable]);
+    return selectedTable.orders.filter((order) => {
+      const matchesQuery =
+        !normalizedQuery ||
+        [
+          order.customerName,
+          order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
+          order.paid ? "paid" : "unpaid",
+          order.received ? "received" : "not received",
+          ...order.items.map((item) => {
+            const product = productColumns.find(
+              (candidate) => candidate.id === item.productId
+            );
+            return product ? getBangusProductFullLabel(product) : "";
+          }),
+        ].some((value) => value.toLowerCase().includes(normalizedQuery));
+      const matchesPayment =
+        paymentStatusFilter === "ALL" ||
+        (paymentStatusFilter === "PAID" && order.paid) ||
+        (paymentStatusFilter === "UNPAID" && !order.paid);
+      const matchesReceipt =
+        receiptStatusFilter === "ALL" ||
+        (receiptStatusFilter === "RECEIVED" && order.received) ||
+        (receiptStatusFilter === "NOT_RECEIVED" && !order.received);
+
+      return matchesQuery && matchesPayment && matchesReceipt;
+    });
+  }, [
+    orderQuery,
+    paymentStatusFilter,
+    productColumns,
+    receiptStatusFilter,
+    selectedTable,
+  ]);
 
   const tableTotals = useMemo(() => {
     const orders = filteredOrders;
@@ -588,27 +613,63 @@ export function OrdersTab({
           )}
 
           {selectedTable && selectedTable.orders.length > 0 && (
-            <label className="mt-3 block sm:mt-5">
-              <span className="sr-only">Search orders in this table</span>
-              <div className="relative">
-                <FaSearch
-                  aria-hidden="true"
-                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
-                />
-                <input
-                  type="search"
-                  value={orderQuery}
-                  onChange={(event) => setOrderQuery(event.target.value)}
-                  placeholder="Search customer, item, or status…"
-                  className="min-h-10 w-full rounded-lg border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15 sm:min-h-11 sm:rounded-xl"
-                />
-              </div>
-              {orderQuery && (
-                <p className="mt-2 text-xs text-stone-500">
+            <div className="mt-3 grid gap-2 sm:mt-5 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+              <label className="block">
+                <span className="sr-only">Search orders in this table</span>
+                <div className="relative">
+                  <FaSearch
+                    aria-hidden="true"
+                    className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-stone-600"
+                  />
+                  <input
+                    type="search"
+                    value={orderQuery}
+                    onChange={(event) => setOrderQuery(event.target.value)}
+                    placeholder="Search customer, item, or status…"
+                    className="min-h-10 w-full rounded-lg border border-white/10 bg-black/30 py-2 pl-11 pr-4 text-sm text-white outline-none placeholder:text-stone-600 focus:border-cyan-300 focus:ring-2 focus:ring-cyan-300/15 sm:min-h-11 sm:rounded-xl"
+                  />
+                </div>
+              </label>
+              <label>
+                <span className="sr-only">Filter by payment status</span>
+                <select
+                  value={paymentStatusFilter}
+                  onChange={(event) =>
+                    setPaymentStatusFilter(
+                      event.target.value as PaymentStatusFilter
+                    )
+                  }
+                  className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:min-h-11 sm:w-36 sm:rounded-xl"
+                >
+                  <option value="ALL">All payments</option>
+                  <option value="PAID">Paid</option>
+                  <option value="UNPAID">Unpaid</option>
+                </select>
+              </label>
+              <label>
+                <span className="sr-only">Filter by receipt status</span>
+                <select
+                  value={receiptStatusFilter}
+                  onChange={(event) =>
+                    setReceiptStatusFilter(
+                      event.target.value as ReceiptStatusFilter
+                    )
+                  }
+                  className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-cyan-300 sm:min-h-11 sm:w-40 sm:rounded-xl"
+                >
+                  <option value="ALL">All receipts</option>
+                  <option value="RECEIVED">Received</option>
+                  <option value="NOT_RECEIVED">Not received</option>
+                </select>
+              </label>
+              {(orderQuery ||
+                paymentStatusFilter !== "ALL" ||
+                receiptStatusFilter !== "ALL") && (
+                <p className="text-xs text-stone-500 sm:col-span-3">
                   {filteredOrders.length} of {selectedTable.orders.length} orders shown
                 </p>
               )}
-            </label>
+            </div>
           )}
 
           {error && (
@@ -698,14 +759,18 @@ export function OrdersTab({
                   className="mx-auto text-4xl text-stone-700"
                 />
                 <p className="mt-4 font-medium text-stone-300">
-                  No orders match this search.
+                  No orders match these filters.
                 </p>
                 <button
                   type="button"
-                  onClick={() => setOrderQuery("")}
+                  onClick={() => {
+                    setOrderQuery("");
+                    setPaymentStatusFilter("ALL");
+                    setReceiptStatusFilter("ALL");
+                  }}
                   className="mt-4 text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
                 >
-                  Clear search
+                  Clear filters
                 </button>
               </div>
             ) : (
