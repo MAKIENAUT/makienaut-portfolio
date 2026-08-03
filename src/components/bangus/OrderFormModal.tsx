@@ -49,6 +49,7 @@ export function OrderFormModal({
     order?.items.map((item) => [item.productId, item.quantity]) ?? []
   );
   const [customerName, setCustomerName] = useState(order?.customerName ?? "");
+  const [repacked, setRepacked] = useState(order?.repacked ?? false);
   const [received, setReceived] = useState(order?.received ?? false);
   const [paid, setPaid] = useState(order?.paid ?? false);
   const [paymentMethod, setPaymentMethod] =
@@ -108,6 +109,7 @@ export function OrderFormModal({
     try {
       await onSave({
         customerName,
+        repacked,
         received,
         paid,
         paymentMethod,
@@ -262,7 +264,18 @@ export function OrderFormModal({
               </div>
             </section>
 
-            <section className="grid grid-cols-[0.8fr_0.7fr_1.3fr] gap-1.5 rounded-lg border border-white/[0.08] bg-black/20 p-2 sm:grid-cols-3 sm:gap-4 sm:rounded-2xl sm:p-4">
+            <section className="grid grid-cols-[0.8fr_0.8fr_0.7fr_1.3fr] gap-1.5 rounded-lg border border-white/[0.08] bg-black/20 p-2 sm:grid-cols-4 sm:gap-4 sm:rounded-2xl sm:p-4">
+              <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 ${repacked ? "border-amber-300/30 bg-amber-300/10" : "border-white/10"} sm:justify-start sm:border-0 sm:bg-transparent sm:px-0`}>
+                <input
+                  type="checkbox"
+                  checked={repacked}
+                  onChange={(event) => setRepacked(event.target.checked)}
+                  className="h-3.5 w-3.5 accent-amber-300 sm:h-4 sm:w-4"
+                />
+                <span className="text-[0.7rem] font-medium text-stone-200 sm:text-sm">
+                  Repacked
+                </span>
+              </label>
               <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 ${received ? "border-violet-300/30 bg-violet-300/10" : "border-white/10"} sm:justify-start sm:border-0 sm:bg-transparent sm:px-0`}>
                 <input
                   type="checkbox"

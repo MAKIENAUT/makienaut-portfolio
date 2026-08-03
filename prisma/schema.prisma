@@ -135,6 +135,7 @@ model BangusOrder {
   deliveryTableId String                @db.Uuid
   deliveryTable   BangusDeliveryTable   @relation(fields: [deliveryTableId], references: [id], onDelete: Cascade)
   customerName    String                @db.VarChar(120)
+  repacked        Boolean               @default(false)
   received        Boolean               @default(false)
   paid            Boolean               @default(false)
   paymentMethod   BangusPaymentMethod?

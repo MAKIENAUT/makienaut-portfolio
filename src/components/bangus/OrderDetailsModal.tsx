@@ -161,8 +161,9 @@ export function OrderDetailsModal({
             )}
           </section>
 
-          <section className="mt-5 grid gap-3 rounded-2xl border border-white/[0.08] p-4 sm:grid-cols-3">
+          <section className="mt-5 grid gap-3 rounded-2xl border border-white/[0.08] p-4 sm:grid-cols-4">
             {[
+              { label: "Repacked", value: order.repacked },
               { label: "Received", value: order.received },
               { label: "Paid", value: order.paid },
             ].map((status) => {

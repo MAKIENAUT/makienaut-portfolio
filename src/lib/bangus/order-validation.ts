@@ -107,6 +107,7 @@ export const validateBangusOrder = (
     ok: true,
     order: {
       customerName,
+      repacked: body.repacked === true,
       received: body.received === true,
       paid: paymentMethod ? true : body.paid === true,
       paymentMethod,
@@ -121,6 +122,7 @@ export const validateBangusOrderStatus = (
   | {
       ok: true;
       status: {
+        repacked: boolean;
         received: boolean;
         paid: boolean;
         paymentMethod: BangusPaymentMethod | null;
@@ -134,6 +136,7 @@ export const validateBangusOrderStatus = (
   const body = value as Record<string, unknown>;
   const paymentMethod = validatePaymentMethod(body.paymentMethod);
   if (
+    typeof body.repacked !== "boolean" ||
     typeof body.received !== "boolean" ||
     typeof body.paid !== "boolean" ||
     paymentMethod === undefined
@@ -144,6 +147,7 @@ export const validateBangusOrderStatus = (
   return {
     ok: true,
     status: {
+      repacked: body.repacked,
       received: body.received,
       paid: paymentMethod ? true : body.paid,
       paymentMethod,

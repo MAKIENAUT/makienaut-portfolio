@@ -43,6 +43,7 @@ export interface BangusOrderItemRecord {
 export interface BangusOrderRecord {
   id: string;
   customerName: string;
+  repacked: boolean;
   received: boolean;
   paid: boolean;
   paymentMethod: BangusPaymentMethod | null;
@@ -55,6 +56,7 @@ export interface BangusOrderRecord {
 
 export interface BangusOrderInput {
   customerName: string;
+  repacked: boolean;
   received: boolean;
   paid: boolean;
   paymentMethod: BangusPaymentMethod | null;

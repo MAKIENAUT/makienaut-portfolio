@@ -124,6 +124,7 @@ export function OrdersTab({
           order.customerName,
           order.paymentMethod ? paymentLabels[order.paymentMethod] : "",
           order.paid ? "paid" : "unpaid",
+          order.repacked ? "repacked" : "not repacked",
           order.received ? "received" : "not received",
           ...order.items.map((item) => {
             const product = productColumns.find(
@@ -157,6 +158,7 @@ export function OrdersTab({
       retail: orders.reduce((total, order) => total + order.retailTotal, 0),
       supplier: orders.reduce((total, order) => total + order.supplierTotal, 0),
       paid: orders.filter((order) => order.paid).length,
+      repacked: orders.filter((order) => order.repacked).length,
       received: orders.filter((order) => order.received).length,
     };
   }, [filteredOrders]);
@@ -335,7 +337,10 @@ export function OrdersTab({
   const updateStatus = async (
     order: BangusOrderRecord,
     changes: Partial<
-      Pick<BangusOrderRecord, "received" | "paid" | "paymentMethod">
+      Pick<
+        BangusOrderRecord,
+        "repacked" | "received" | "paid" | "paymentMethod"
+      >
     >
   ) => {
     setBusyOrderId(order.id);
@@ -357,6 +362,7 @@ export function OrdersTab({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            repacked: changes.repacked ?? order.repacked,
             received: changes.received ?? order.received,
             paid,
             paymentMethod,
@@ -699,7 +705,7 @@ export function OrdersTab({
           <>
             <section
               aria-label="Delivery table summary"
-              className="grid grid-cols-4 gap-px border-b border-white/[0.08] bg-white/[0.08]"
+              className="grid grid-cols-5 gap-px border-b border-white/[0.08] bg-white/[0.08]"
             >
               {[
                 {
@@ -718,6 +724,11 @@ export function OrdersTab({
                   label: "Paid",
                   value: `${tableTotals.paid}/${filteredOrders.length}`,
                   classes: "text-cyan-300",
+                },
+                {
+                  label: "Repacked",
+                  value: `${tableTotals.repacked}/${filteredOrders.length}`,
+                  classes: "text-amber-300",
                 },
                 {
                   label: "Received",
@@ -829,7 +840,21 @@ export function OrdersTab({
                         </div>
                       </div>
 
-                      <div className="mt-2 grid grid-cols-[1fr_1fr_minmax(0,1.15fr)] gap-1.5">
+                      <div className="mt-2 grid grid-cols-[1fr_1fr_1fr_minmax(0,1.15fr)] gap-1.5">
+                        <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.repacked ? "border-amber-300/30 bg-amber-300/10 text-amber-100" : "border-white/10 text-stone-400"}`}>
+                          <input
+                            type="checkbox"
+                            checked={order.repacked}
+                            disabled={isBusy}
+                            onChange={(event) =>
+                              void updateStatus(order, {
+                                repacked: event.target.checked,
+                              })
+                            }
+                            className="h-3.5 w-3.5 accent-amber-300"
+                          />
+                          Repacked
+                        </label>
                         <label className={`flex min-h-10 cursor-pointer items-center justify-center gap-1.5 rounded-lg border px-2 text-[0.7rem] font-medium ${order.received ? "border-violet-300/30 bg-violet-300/10 text-violet-100" : "border-white/10 text-stone-400"}`}>
                           <input
                             type="checkbox"
@@ -915,6 +940,9 @@ export function OrdersTab({
                         </th>
                       )}
                       <th className="sticky top-0 z-20 min-w-24 bg-[#0d100f] px-4 py-4 text-center font-semibold">
+                        Repacked
+                      </th>
+                      <th className="sticky top-0 z-20 min-w-24 bg-[#0d100f] px-4 py-4 text-center font-semibold">
                         Received
                       </th>
                       <th className="sticky top-0 z-20 min-w-20 bg-[#0d100f] px-4 py-4 text-center font-semibold">
@@ -985,6 +1013,24 @@ export function OrdersTab({
                               {formatPeso(order.supplierTotal)}
                             </td>
                           )}
+                          <td className="px-4 py-3 text-center">
+                            <label className="inline-flex cursor-pointer items-center">
+                              <span className="sr-only">
+                                {order.customerName} repacked
+                              </span>
+                              <input
+                                type="checkbox"
+                                checked={order.repacked}
+                                disabled={isBusy}
+                                onChange={(event) =>
+                                  void updateStatus(order, {
+                                    repacked: event.target.checked,
+                                  })
+                                }
+                                className="h-4 w-4 accent-amber-300"
+                              />
+                            </label>
+                          </td>
                           <td className="px-4 py-3 text-center">
                             <label className="inline-flex cursor-pointer items-center">
                               <span className="sr-only">
@@ -1059,6 +1105,9 @@ export function OrdersTab({
                           {formatPeso(tableTotals.supplier)}
                         </td>
                       )}
+                      <td className="px-4 py-4 text-center text-amber-200">
+                        {tableTotals.repacked}
+                      </td>
                       <td className="px-4 py-4 text-center text-cyan-200">
                         {tableTotals.received}
                       </td>

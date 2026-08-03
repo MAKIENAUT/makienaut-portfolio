@@ -30,6 +30,7 @@ interface StoredOrderItem {
 interface StoredOrder {
   id: string;
   customerName: string;
+  repacked: boolean;
   received: boolean;
   paid: boolean;
   paymentMethod: BangusPaymentMethod | null;
@@ -58,6 +59,7 @@ const serializeOrder = (order: StoredOrder): BangusOrderRecord => {
   return {
     id: order.id,
     customerName: order.customerName,
+    repacked: order.repacked,
     received: order.received,
     paid: order.paid,
     paymentMethod: order.paymentMethod,
@@ -177,6 +179,7 @@ export const createBangusOrder = async (
       data: {
         deliveryTableId,
         customerName: input.customerName,
+        repacked: input.repacked,
         received: input.received,
         paid: input.paid,
         paymentMethod: input.paymentMethod,
@@ -210,6 +213,7 @@ export const updateBangusOrder = async (
       where: { id },
       data: {
         customerName: input.customerName,
+        repacked: input.repacked,
         received: input.received,
         paid: input.paid,
         paymentMethod: input.paymentMethod,
@@ -227,6 +231,7 @@ export const updateBangusOrder = async (
 export const updateBangusOrderStatus = async (
   id: string,
   status: {
+    repacked: boolean;
     received: boolean;
     paid: boolean;
     paymentMethod: BangusPaymentMethod | null;
