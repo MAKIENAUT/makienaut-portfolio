@@ -43,6 +43,7 @@ interface OrdersTabProps {
 
 type PaymentStatusFilter = "ALL" | "PAID" | "UNPAID";
 type ReceiptStatusFilter = "ALL" | "RECEIVED" | "NOT_RECEIVED";
+type ShortageStatusFilter = "ALL" | "SHORTED" | "NO_SHORTAGES";
 
 const paymentLabels: Record<BangusPaymentMethod, string> = {
   GCASH: "GCash",
@@ -158,6 +159,8 @@ export function OrdersTab({
     useState<PaymentStatusFilter>("ALL");
   const [receiptStatusFilter, setReceiptStatusFilter] =
     useState<ReceiptStatusFilter>("ALL");
+  const [shortageStatusFilter, setShortageStatusFilter] =
+    useState<ShortageStatusFilter>("ALL");
   const [showSupplierPrices, setShowSupplierPrices] = useState(true);
   const [productMetrics, setProductMetrics] = useState<
     BangusProductMetric[] | null
@@ -206,8 +209,12 @@ export function OrdersTab({
         receiptStatusFilter === "ALL" ||
         (receiptStatusFilter === "RECEIVED" && order.received) ||
         (receiptStatusFilter === "NOT_RECEIVED" && !order.received);
+      const matchesShortage =
+        shortageStatusFilter === "ALL" ||
+        (shortageStatusFilter === "SHORTED" && hasOrderShortage(order)) ||
+        (shortageStatusFilter === "NO_SHORTAGES" && !hasOrderShortage(order));
 
-      return matchesQuery && matchesPayment && matchesReceipt;
+      return matchesQuery && matchesPayment && matchesReceipt && matchesShortage;
     });
   }, [
     orderQuery,
@@ -215,6 +222,7 @@ export function OrdersTab({
     paymentStatusFilter,
     productColumns,
     receiptStatusFilter,
+    shortageStatusFilter,
     selectedTable,
   ]);
 
@@ -631,6 +639,17 @@ export function OrdersTab({
               {selectedTable && !isSupplier && (
                 <button
                   type="button"
+                  onClick={() => setShowSupplierPrices((current) => !current)}
+                  aria-pressed={showSupplierPrices}
+                  className="hidden min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 sm:inline-flex"
+                >
+                  {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
+                  {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                </button>
+              )}
+              {selectedTable && !isSupplier && (
+                <button
+                  type="button"
                   onClick={() => void openProductMetrics()}
                   disabled={isLoadingMetrics}
                   title="Product metrics"
@@ -674,7 +693,7 @@ export function OrdersTab({
                       {!isSupplier && <button
                         type="button"
                         onClick={() => setShowSupplierPrices((current) => !current)}
-                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-white/10"
+                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 sm:hidden"
                         aria-pressed={showSupplierPrices}
                       >
                         {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
@@ -748,7 +767,7 @@ export function OrdersTab({
           )}
 
           {selectedTable && selectedTable.orders.length > 0 && (
-            <div className={`mt-3 grid gap-2 sm:mt-5 sm:items-center ${isSupplier ? "sm:grid-cols-[minmax(0,1fr)_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto_auto]"}`}>
+            <div className={`mt-3 grid gap-2 sm:mt-5 sm:items-center ${isSupplier ? "sm:grid-cols-[minmax(0,1fr)_auto_auto]" : "sm:grid-cols-[minmax(0,1fr)_auto_auto_auto]"}`}>
               <label className="block">
                 <span className="sr-only">Search orders in this table</span>
                 <div className="relative">
@@ -797,10 +816,27 @@ export function OrdersTab({
                   <option value="NOT_RECEIVED">Not received</option>
                 </select>
               </label>
+              <label>
+                <span className="sr-only">Filter by shortage status</span>
+                <select
+                  value={shortageStatusFilter}
+                  onChange={(event) =>
+                    setShortageStatusFilter(
+                      event.target.value as ShortageStatusFilter
+                    )
+                  }
+                  className="min-h-10 w-full rounded-lg border border-white/10 bg-[#0b0e0d] px-3 text-sm text-stone-200 outline-none focus:border-rose-300 sm:min-h-11 sm:w-40 sm:rounded-xl"
+                >
+                  <option value="ALL">All shortages</option>
+                  <option value="SHORTED">Shorted</option>
+                  <option value="NO_SHORTAGES">No shortages</option>
+                </select>
+              </label>
               {(orderQuery ||
                 (!isSupplier && paymentStatusFilter !== "ALL") ||
-                receiptStatusFilter !== "ALL") && (
-                <p className="text-xs text-stone-500 sm:col-span-3">
+                receiptStatusFilter !== "ALL" ||
+                shortageStatusFilter !== "ALL") && (
+                <p className="text-xs text-stone-500 sm:col-span-full">
                   {filteredOrders.length} of {selectedTable.orders.length} orders shown
                 </p>
               )}
@@ -911,6 +947,7 @@ export function OrdersTab({
                     setOrderQuery("");
                     setPaymentStatusFilter("ALL");
                     setReceiptStatusFilter("ALL");
+                    setShortageStatusFilter("ALL");
                   }}
                   className="mt-4 text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
                 >
