@@ -48,6 +48,9 @@ export function OrderFormModal({
   const initialQuantities = Object.fromEntries(
     order?.items.map((item) => [item.productId, item.quantity]) ?? []
   );
+  const initialShortQuantities = Object.fromEntries(
+    order?.items.map((item) => [item.productId, item.shortQuantity]) ?? []
+  );
   const [customerName, setCustomerName] = useState(order?.customerName ?? "");
   const [repacked, setRepacked] = useState(order?.repacked ?? false);
   const [received, setReceived] = useState(order?.received ?? false);
@@ -56,6 +59,8 @@ export function OrderFormModal({
     useState<BangusPaymentMethod | null>(order?.paymentMethod ?? null);
   const [quantities, setQuantities] =
     useState<Record<string, number>>(initialQuantities);
+  const [shortQuantities, setShortQuantities] =
+    useState<Record<string, number>>(initialShortQuantities);
   const [query, setQuery] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState("");
@@ -114,6 +119,7 @@ export function OrderFormModal({
         paid,
         paymentMethod,
         quantities,
+        shortQuantities,
       });
       onClose();
     } catch (saveError) {
@@ -212,7 +218,7 @@ export function OrderFormModal({
                 {availableProducts.map((product) => {
                   const quantity = quantities[product.id] ?? 0;
                   return (
-                    <label
+                    <div
                       key={product.id}
                       className={`flex min-w-0 items-center gap-2 rounded-lg border p-2 transition sm:gap-3 sm:rounded-xl sm:p-3 ${
                         quantity > 0
@@ -237,28 +243,72 @@ export function OrderFormModal({
                           {formatPeso(product.retailPrice)} retail
                         </span>
                       </span>
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        max="10000"
-                        step="1"
-                        value={quantity || ""}
-                        onChange={(event) => {
-                          const nextQuantity = Math.max(
-                            0,
-                            Number.parseInt(event.target.value || "0", 10) || 0
-                          );
-                          setQuantities((current) => ({
-                            ...current,
-                            [product.id]: nextQuantity,
-                          }));
-                        }}
-                        aria-label={`${getBangusProductFullLabel(product)} quantity`}
-                        placeholder="0"
-                        className="h-10 w-16 rounded-lg border border-white/10 bg-black/30 px-1 text-center text-base font-semibold tabular-nums text-white outline-none focus:border-cyan-300 sm:w-20 sm:px-2 sm:text-sm"
-                      />
-                    </label>
+                      <div className="grid shrink-0 grid-cols-2 gap-1.5 sm:gap-2">
+                        <label className="block text-center">
+                          <span className="mb-1 block text-[0.6rem] font-medium uppercase tracking-wide text-stone-500">
+                            Ordered
+                          </span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max="10000"
+                            step="1"
+                            value={quantity || ""}
+                            onChange={(event) => {
+                              const nextQuantity = Math.max(
+                                0,
+                                Number.parseInt(event.target.value || "0", 10) || 0
+                              );
+                              setQuantities((current) => ({
+                                ...current,
+                                [product.id]: nextQuantity,
+                              }));
+                              setShortQuantities((current) => ({
+                                ...current,
+                                [product.id]: Math.min(
+                                  current[product.id] ?? 0,
+                                  nextQuantity
+                                ),
+                              }));
+                            }}
+                            aria-label={`${getBangusProductFullLabel(product)} quantity ordered`}
+                            placeholder="0"
+                            className="h-10 w-12 rounded-lg border border-white/10 bg-black/30 px-1 text-center text-base font-semibold tabular-nums text-white outline-none focus:border-cyan-300 sm:w-16 sm:px-2 sm:text-sm"
+                          />
+                        </label>
+                        <label className="block text-center">
+                          <span className="mb-1 block text-[0.6rem] font-medium uppercase tracking-wide text-amber-300/80">
+                            Short
+                          </span>
+                          <input
+                            type="number"
+                            inputMode="numeric"
+                            min="0"
+                            max={quantity}
+                            step="1"
+                            disabled={quantity === 0}
+                            value={shortQuantities[product.id] || ""}
+                            onChange={(event) => {
+                              const nextShortQuantity = Math.min(
+                                Math.max(
+                                  Number.parseInt(event.target.value || "0", 10) || 0,
+                                  0
+                                ),
+                                quantity
+                              );
+                              setShortQuantities((current) => ({
+                                ...current,
+                                [product.id]: nextShortQuantity,
+                              }));
+                            }}
+                            aria-label={`${getBangusProductFullLabel(product)} quantity short or missing`}
+                            placeholder="0"
+                            className="h-10 w-12 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-1 text-center text-base font-semibold tabular-nums text-amber-100 outline-none focus:border-amber-300 disabled:cursor-not-allowed disabled:opacity-40 sm:w-16 sm:px-2 sm:text-sm"
+                          />
+                        </label>
+                      </div>
+                    </div>
                   );
                 })}
               </div>

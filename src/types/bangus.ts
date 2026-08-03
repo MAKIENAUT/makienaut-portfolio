@@ -36,6 +36,7 @@ export type BangusPaymentMethod = (typeof BANGUS_PAYMENT_METHODS)[number];
 export interface BangusOrderItemRecord {
   productId: string;
   quantity: number;
+  shortQuantity: number;
   supplierUnitPrice: number;
   retailUnitPrice: number;
 }
@@ -61,6 +62,7 @@ export interface BangusOrderInput {
   paid: boolean;
   paymentMethod: BangusPaymentMethod | null;
   quantities: Record<string, number>;
+  shortQuantities: Record<string, number>;
 }
 
 export interface BangusDeliveryTableRecord {

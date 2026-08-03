@@ -103,6 +103,36 @@ export const validateBangusOrder = (
     return { ok: false, message: "Add at least one product to the order." };
   }
 
+  const rawShortQuantities = body.shortQuantities ?? {};
+  if (
+    typeof rawShortQuantities !== "object" ||
+    rawShortQuantities === null ||
+    Array.isArray(rawShortQuantities)
+  ) {
+    return { ok: false, message: "Enter valid short quantities." };
+  }
+
+  const shortQuantities: Record<string, number> = {};
+  for (const [productId, rawShortQuantity] of Object.entries(
+    rawShortQuantities as Record<string, unknown>
+  )) {
+    const shortQuantity = Number(rawShortQuantity);
+    const orderedQuantity = quantities[productId];
+    if (
+      !isBangusUuid(productId) ||
+      orderedQuantity === undefined ||
+      !Number.isInteger(shortQuantity) ||
+      shortQuantity < 0 ||
+      shortQuantity > orderedQuantity
+    ) {
+      return {
+        ok: false,
+        message: "A missing quantity must be a whole number up to the quantity ordered.",
+      };
+    }
+    if (shortQuantity > 0) shortQuantities[productId] = shortQuantity;
+  }
+
   return {
     ok: true,
     order: {
@@ -112,6 +142,7 @@ export const validateBangusOrder = (
       paid: paymentMethod ? true : body.paid === true,
       paymentMethod,
       quantities,
+      shortQuantities,
     },
   };
 };

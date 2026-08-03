@@ -24,6 +24,7 @@ const deliveryTableInclude = {
 interface StoredOrderItem {
   productId: string;
   quantity: number;
+  shortQuantity: number;
   supplierUnitPrice: number;
   retailUnitPrice: number;
 }
@@ -53,6 +54,7 @@ const serializeOrder = (order: StoredOrder): BangusOrderRecord => {
   const items: BangusOrderItemRecord[] = order.items.map((item) => ({
     productId: item.productId,
     quantity: item.quantity,
+    shortQuantity: item.shortQuantity,
     supplierUnitPrice: item.supplierUnitPrice,
     retailUnitPrice: item.retailUnitPrice,
   }));
@@ -91,6 +93,7 @@ const serializeDeliveryTable = (
 
 const buildOrderItems = async (
   quantities: Record<string, number>,
+  shortQuantities: Record<string, number>,
   database = getBangusDatabase()
 ) => {
   const selectedQuantities = Object.entries(quantities).filter(
@@ -121,6 +124,7 @@ const buildOrderItems = async (
     return {
       productId,
       quantity,
+      shortQuantity: shortQuantities[productId] ?? 0,
       supplierUnitPrice: product.supplierPrice,
       retailUnitPrice: product.retailPrice,
     };
@@ -196,7 +200,11 @@ export const createBangusOrder = async (
 
   const order = await database.$transaction(async (transaction) => {
     const [items, lastOrder] = await Promise.all([
-      buildOrderItems(input.quantities, transaction as typeof database),
+      buildOrderItems(
+        input.quantities,
+        input.shortQuantities,
+        transaction as typeof database
+      ),
       transaction.bangusOrder.findFirst({
         where: { deliveryTableId },
         orderBy: { sortOrder: "desc" },
@@ -233,6 +241,7 @@ export const updateBangusOrder = async (
   const order = await database.$transaction(async (transaction) => {
     const items = await buildOrderItems(
       input.quantities,
+      input.shortQuantities,
       transaction as typeof database
     );
 

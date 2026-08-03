@@ -223,6 +223,11 @@ export function OrderDetailsModal({
                     <p className="mt-1 font-semibold text-white">
                       {item.quantity}
                     </p>
+                    {item.shortQuantity > 0 && (
+                      <p className="mt-1 text-xs font-medium text-amber-200">
+                        {item.shortQuantity} short
+                      </p>
+                    )}
                   </div>
                   <div className="min-w-28 sm:text-right">
                     <p className="text-xs text-stone-500">Retail subtotal</p>

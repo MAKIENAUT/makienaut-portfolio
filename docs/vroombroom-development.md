@@ -40,9 +40,9 @@ in the Vercel Development environment and pulled into `.env.local`.
 - `orb-weaver-main-db` remains the deployed database.
 - Preview and Production use `OW_MAIN_DB_DATABASE_URL` or the existing deployed
   Prisma Postgres variables.
-- Bangus catalog and orders always use `OW_MAIN_DB_DATABASE_URL`, including in
-  Development. Add that variable to the Vercel Development environment with
-  the same value as Production before using the Bangus back office locally.
+- Bangus catalog and orders prefer `OW_MAIN_DB_DATABASE_URL`. When a local
+  environment contains a redacted or invalid main connection value, they fall
+  back to `ORBW_DEV_DATABASE_URL` so the back office remains usable.
 - Use different `ORBW_AUTH_SECRET` values for Development, Preview, and
   Production. Back-office users are stored in their respective databases; run
   `npm run auth:admin:create` after deploying migrations to create or reset an

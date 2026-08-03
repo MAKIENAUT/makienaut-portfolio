@@ -9,17 +9,46 @@ const globalForPrisma = globalThis as unknown as {
 let orbWeaverPrisma = globalForPrisma.orbWeaverPrisma;
 let bangusPrisma = globalForPrisma.bangusPrisma;
 
+const isUsablePostgresUrl = (value: string | undefined) => {
+  if (!value) return false;
+
+  try {
+    const url = new URL(value);
+    return (
+      (url.protocol === "postgres:" || url.protocol === "postgresql:") &&
+      Boolean(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+};
+
+const firstUsableDatabaseUrl = (...values: Array<string | undefined>) =>
+  values.find(isUsablePostgresUrl);
+
 const resolveMainDatabaseUrl = () =>
-  process.env.OW_MAIN_DB_DATABASE_URL ||
-  process.env.DATABASE_URL ||
-  process.env.OW_MAIN_DB_POSTGRES_URL ||
-  process.env.OW_MAIN_DB_PRISMA_DATABASE_URL;
+  firstUsableDatabaseUrl(
+    process.env.OW_MAIN_DB_DATABASE_URL,
+    process.env.DATABASE_URL,
+    process.env.OW_MAIN_DB_POSTGRES_URL,
+    process.env.OW_MAIN_DB_PRISMA_DATABASE_URL
+  );
 
 const resolveOrbWeaverDatabaseUrl = () =>
-  (process.env.NODE_ENV !== "production"
-    ? process.env.ORBW_DEV_DATABASE_URL
-    : undefined) ||
-  resolveMainDatabaseUrl();
+  firstUsableDatabaseUrl(
+    process.env.NODE_ENV !== "production"
+      ? process.env.ORBW_DEV_DATABASE_URL
+      : undefined,
+    resolveMainDatabaseUrl()
+  );
+
+const resolveBangusDatabaseUrl = () =>
+  firstUsableDatabaseUrl(
+    resolveMainDatabaseUrl(),
+    process.env.NODE_ENV !== "production"
+      ? process.env.ORBW_DEV_DATABASE_URL
+      : undefined
+  );
 
 const normalizePostgresSslMode = (connectionString: string) => {
   try {
@@ -62,18 +91,18 @@ export const getOrbWeaverDatabase = () => {
   return orbWeaverPrisma;
 };
 
-// Bangus is intentionally shared across Development, Preview, and Production.
-// Keep this separate from VroomBroom's development-only database client.
+// Prefer the shared Bangus database. Locally, Vercel may deliberately redact
+// Production connection values, so fall back to the configured development DB.
 export const getBangusDatabase = () => {
   if (bangusPrisma) {
     return bangusPrisma;
   }
 
-  const connectionString = resolveMainDatabaseUrl();
+  const connectionString = resolveBangusDatabaseUrl();
 
   if (!connectionString) {
     throw new Error(
-      "Bangus database is not configured. Add OW_MAIN_DB_DATABASE_URL to this environment."
+      "Bangus database is not configured. Add a valid OW_MAIN_DB_DATABASE_URL or ORBW_DEV_DATABASE_URL."
     );
   }
 

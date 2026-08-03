@@ -493,29 +493,6 @@ export function OrdersTab({
     }
   };
 
-  const saveProductShortages = async (shortQuantities: Record<string, number>) => {
-    if (!selectedTable) throw new Error("Choose a delivery table first.");
-
-    const response = await fetch(
-      `/api/bangus/backoffice/delivery-tables/${selectedTable.id}/metrics`,
-      {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ shortQuantities }),
-      }
-    );
-    const result = (await response.json()) as {
-      metrics?: BangusProductMetric[];
-      message?: string;
-    };
-
-    if (!response.ok || !result.metrics) {
-      throw new Error(result.message || "Product metrics could not be saved.");
-    }
-
-    setProductMetrics(result.metrics);
-  };
-
   const exportSupplierOrder = () => {
     if (!selectedTable || selectedTable.orders.length === 0) return;
 
@@ -1290,7 +1267,6 @@ export function OrdersTab({
           metrics={productMetrics}
           tableName={selectedTable.name}
           onClose={() => setProductMetrics(null)}
-          onSave={saveProductShortages}
         />
       )}
     </>

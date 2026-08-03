@@ -158,6 +158,7 @@ model BangusOrderItem {
   productId         String        @db.Uuid
   product           BangusProduct @relation(fields: [productId], references: [id], onDelete: Restrict)
   quantity          Int
+  shortQuantity     Int           @default(0)
   supplierUnitPrice Int
   retailUnitPrice   Int
   createdAt         DateTime      @default(now()) @db.Timestamptz(3)

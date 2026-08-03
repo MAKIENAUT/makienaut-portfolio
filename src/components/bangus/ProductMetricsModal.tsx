@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import { FaBoxOpen, FaSave, FaTimes } from "react-icons/fa";
+import { useEffect, useMemo } from "react";
+import { FaBoxOpen, FaTimes } from "react-icons/fa";
 import { getBangusProductFullLabel } from "@/lib/bangus/product-label";
 import type {
   BangusProductMetric,
@@ -13,7 +13,6 @@ interface ProductMetricsModalProps {
   metrics: BangusProductMetric[];
   tableName: string;
   onClose: () => void;
-  onSave: (shortQuantities: Record<string, number>) => Promise<void>;
 }
 
 export function ProductMetricsModal({
@@ -21,19 +20,12 @@ export function ProductMetricsModal({
   metrics,
   tableName,
   onClose,
-  onSave,
 }: ProductMetricsModalProps) {
-  const [shortQuantities, setShortQuantities] = useState<Record<string, number>>(
-    () => Object.fromEntries(metrics.map((metric) => [metric.productId, metric.shortQuantity]))
-  );
-  const [isSaving, setIsSaving] = useState(false);
-  const [error, setError] = useState("");
-
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape" && !isSaving) onClose();
+      if (event.key === "Escape") onClose();
     };
     window.addEventListener("keydown", closeOnEscape);
 
@@ -41,25 +33,16 @@ export function ProductMetricsModal({
       document.body.style.overflow = previousOverflow;
       window.removeEventListener("keydown", closeOnEscape);
     };
-  }, [isSaving, onClose]);
+  }, [onClose]);
 
   const rows = useMemo(() => {
     const productById = new Map(products.map((product) => [product.id, product]));
 
     return metrics
       .map((metric) => {
-        const shortQuantity = Math.min(
-          Math.max(shortQuantities[metric.productId] ?? 0, 0),
-          metric.orderedQuantity
-        );
-        const receivedQuantity = metric.orderedQuantity - shortQuantity;
-
         return {
           ...metric,
           product: productById.get(metric.productId),
-          shortQuantity,
-          receivedQuantity,
-          onHandQuantity: Math.max(receivedQuantity - metric.repackedQuantity, 0),
         };
       })
       .sort((a, b) =>
@@ -67,7 +50,7 @@ export function ProductMetricsModal({
           b.product ? getBangusProductFullLabel(b.product) : b.productId
         )
       );
-  }, [metrics, products, shortQuantities]);
+  }, [metrics, products]);
 
   const totals = rows.reduce(
     (current, row) => ({
@@ -80,30 +63,12 @@ export function ProductMetricsModal({
     { ordered: 0, received: 0, repacked: 0, onHand: 0, short: 0 }
   );
 
-  const save = async () => {
-    setIsSaving(true);
-    setError("");
-
-    try {
-      await onSave(shortQuantities);
-      onClose();
-    } catch (saveError) {
-      setError(
-        saveError instanceof Error
-          ? saveError.message
-          : "Product metrics could not be saved."
-      );
-    } finally {
-      setIsSaving(false);
-    }
-  };
-
   return (
     <div
       className="fixed inset-0 z-50 flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-6"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !isSaving) onClose();
+        if (event.target === event.currentTarget) onClose();
       }}
     >
       <section
@@ -124,15 +89,14 @@ export function ProductMetricsModal({
               Product metrics · {tableName}
             </h2>
             <p className="mt-1 text-sm text-stone-500">
-              Set a supplier short quantity to calculate received stock and on hand.
+              Missing quantities are recorded on each customer order and totalled here.
             </p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            disabled={isSaving}
             aria-label="Close product metrics"
-            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-stone-400 transition hover:border-white/20 hover:text-white disabled:opacity-50"
+            className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-white/10 text-stone-400 transition hover:border-white/20 hover:text-white"
           >
             <FaTimes aria-hidden="true" />
           </button>
@@ -176,33 +140,8 @@ export function ProductMetricsModal({
                     <td className="px-3 py-3 text-center font-semibold tabular-nums text-white">
                       {row.onHandQuantity}
                     </td>
-                    <td className="px-3 py-3 text-center">
-                      <input
-                        type="number"
-                        inputMode="numeric"
-                        min="0"
-                        max={row.orderedQuantity}
-                        value={row.shortQuantity || ""}
-                        onChange={(event) => {
-                          const nextValue = Math.min(
-                            Math.max(
-                              Number.parseInt(event.target.value || "0", 10) || 0,
-                              0
-                            ),
-                            row.orderedQuantity
-                          );
-                          setShortQuantities((current) => ({
-                            ...current,
-                            [row.productId]: nextValue,
-                          }));
-                        }}
-                        aria-label={`Supplier short quantity for ${
-                          row.product
-                            ? getBangusProductFullLabel(row.product)
-                            : "product"
-                        }`}
-                        className="h-9 w-16 rounded-lg border border-amber-300/20 bg-amber-300/[0.06] px-1 text-center font-semibold tabular-nums text-amber-100 outline-none focus:border-amber-300"
-                      />
+                    <td className="px-3 py-3 text-center font-semibold tabular-nums text-amber-200">
+                      {row.shortQuantity}
                     </td>
                   </tr>
                 ))}
@@ -221,29 +160,13 @@ export function ProductMetricsModal({
           )}
         </div>
 
-        {error && (
-          <p role="alert" className="mx-4 mt-3 rounded-xl border border-red-400/20 bg-red-400/10 p-3 text-sm text-red-100 sm:mx-6">
-            {error}
-          </p>
-        )}
-
         <footer className="flex shrink-0 justify-end gap-3 border-t border-white/[0.08] px-4 py-3 sm:px-6 sm:py-4">
           <button
             type="button"
             onClick={onClose}
-            disabled={isSaving}
-            className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 text-sm font-semibold text-stone-400 transition hover:text-white disabled:opacity-50"
+            className="inline-flex min-h-11 items-center justify-center rounded-xl border border-white/10 px-5 text-sm font-semibold text-stone-300 transition hover:border-white/20 hover:text-white"
           >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={() => void save()}
-            disabled={isSaving || rows.length === 0}
-            className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-amber-300 px-5 text-sm font-bold text-[#151008] transition hover:bg-amber-200 disabled:cursor-wait disabled:opacity-60"
-          >
-            <FaSave aria-hidden="true" />
-            {isSaving ? "Saving…" : "Save shortages"}
+            Close
           </button>
         </footer>
       </section>
