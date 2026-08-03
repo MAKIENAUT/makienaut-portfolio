@@ -7,7 +7,6 @@ import {
   FaChevronDown,
   FaChevronUp,
   FaEdit,
-  FaEllipsisH,
   FaEye,
   FaEyeSlash,
   FaFileDownload,
@@ -641,10 +640,13 @@ export function OrdersTab({
                   type="button"
                   onClick={() => setShowSupplierPrices((current) => !current)}
                   aria-pressed={showSupplierPrices}
-                  className="hidden min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 px-4 text-sm font-semibold text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 sm:inline-flex"
+                  aria-label={showSupplierPrices ? "Hide supplier prices" : "Show supplier prices"}
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-sm text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 sm:min-h-11 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
                 >
                   {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
-                  {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                  <span className="sr-only sm:not-sr-only">
+                    {showSupplierPrices ? "Hide supplier" : "Show supplier"}
+                  </span>
                 </button>
               )}
               {selectedTable && !isSupplier && (
@@ -671,48 +673,30 @@ export function OrdersTab({
                 <FaCalendarAlt aria-hidden="true" />
                 <span className="sr-only sm:not-sr-only">New table</span>
               </button>}
-              <details className="group relative shrink-0">
-                <summary
-                  aria-label="More table actions"
-                  className="flex h-10 w-10 cursor-pointer list-none items-center justify-center rounded-lg border border-white/10 text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 sm:hidden [&::-webkit-details-marker]:hidden"
+              {!isSupplier && (
+                <button
+                  type="button"
+                  disabled={isRefreshing}
+                  onClick={() => void refreshTables()}
+                  aria-label="Refresh delivery tables"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-white/10 text-sm text-stone-300 transition hover:border-cyan-300/30 hover:text-cyan-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
                 >
-                  <FaEllipsisH aria-hidden="true" />
-                </summary>
-                <div className="absolute right-0 top-12 z-30 grid w-56 gap-1 rounded-xl border border-white/10 bg-[#171c1a] p-2 shadow-2xl sm:static sm:flex sm:w-auto sm:bg-transparent sm:p-0 sm:shadow-none">
-                  {!isSupplier && <button
-                    type="button"
-                    disabled={isRefreshing}
-                    onClick={() => void refreshTables()}
-                    className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 disabled:cursor-wait disabled:opacity-60 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-white/10"
-                  >
-                    <FaSyncAlt aria-hidden="true" className={isRefreshing ? "animate-spin" : ""} />
-                    Refresh
-                  </button>}
-                  {selectedTable && (
-                    <>
-                      {!isSupplier && <button
-                        type="button"
-                        onClick={() => setShowSupplierPrices((current) => !current)}
-                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-stone-300 transition hover:bg-white/[0.05] hover:text-cyan-200 sm:hidden"
-                        aria-pressed={showSupplierPrices}
-                      >
-                        {showSupplierPrices ? <FaEyeSlash aria-hidden="true" /> : <FaEye aria-hidden="true" />}
-                        {showSupplierPrices ? "Hide supplier" : "Show supplier"}
-                      </button>}
-                      <button
-                        type="button"
-                        disabled={selectedTable.orders.length === 0}
-                        onClick={exportSupplierOrder}
-                        title="Download the supplier order as Markdown"
-                        className="inline-flex min-h-10 items-center gap-3 rounded-lg px-3 text-left text-sm font-semibold text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-11 sm:justify-center sm:gap-2 sm:rounded-xl sm:border sm:border-emerald-300/30"
-                      >
-                        <FaFileDownload aria-hidden="true" />
-                        Supplier order
-                      </button>
-                    </>
-                  )}
-                </div>
-              </details>
+                  <FaSyncAlt aria-hidden="true" className={isRefreshing ? "animate-spin" : ""} />
+                  <span className="sr-only sm:not-sr-only">Refresh</span>
+                </button>
+              )}
+              {selectedTable && (
+                <button
+                  type="button"
+                  disabled={selectedTable.orders.length === 0}
+                  onClick={exportSupplierOrder}
+                  title="Download the supplier order as Markdown"
+                  className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-emerald-300/30 text-sm text-emerald-200 transition hover:bg-emerald-300/10 disabled:cursor-not-allowed disabled:opacity-40 sm:min-h-11 sm:w-auto sm:gap-2 sm:rounded-xl sm:px-4"
+                >
+                  <FaFileDownload aria-hidden="true" />
+                  <span className="sr-only sm:not-sr-only">Supplier order</span>
+                </button>
+              )}
             </div>
           </div>
 
