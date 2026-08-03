@@ -5,7 +5,7 @@ import { stdin, stdout } from "node:process";
 import { config as loadEnvironment } from "dotenv";
 import pg from "pg";
 
-loadEnvironment({ path: ".env.local", quiet: true });
+loadEnvironment({ path: process.env.ORBW_ENV_FILE || ".env.local", quiet: true });
 loadEnvironment({ quiet: true });
 
 const scrypt = promisify(scryptCallback);

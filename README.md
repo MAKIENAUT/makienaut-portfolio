@@ -57,6 +57,11 @@ The command defaults to username `admin`, prompts for a password, and saves
 only an scrypt hash in the database. Run it separately in each development,
 preview, or production database.
 
+If production database credentials cannot be used from a local machine, set
+`ORBW_BOOTSTRAP_ADMIN_PASSWORD` in Vercel Production, sign in once as `admin`,
+then delete that environment variable. The first successful sign-in creates the
+database record; future sign-ins use the database hash only.
+
 Generate the Prisma client and apply the committed migration:
 
 ```bash

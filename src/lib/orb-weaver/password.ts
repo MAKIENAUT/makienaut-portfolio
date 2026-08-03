@@ -1,4 +1,5 @@
 import {
+  randomBytes,
   scrypt as scryptCallback,
   timingSafeEqual,
 } from "node:crypto";
@@ -14,6 +15,13 @@ const deriveKey = (password: string, salt: Buffer, keyLength: number) =>
       resolve(derivedKey);
     });
   });
+
+export const hashOrbWeaverPassword = async (password: string) => {
+  const salt = randomBytes(16);
+  const derivedKey = await deriveKey(password, salt, 64);
+
+  return `scrypt:${salt.toString("hex")}:${derivedKey.toString("hex")}`;
+};
 
 export const verifyOrbWeaverPassword = async (
   password: string,

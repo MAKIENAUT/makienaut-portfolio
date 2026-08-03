@@ -1,5 +1,9 @@
+import { timingSafeEqual } from "node:crypto";
 import { getOrbWeaverDatabase } from "@/lib/orb-weaver/database";
-import { verifyOrbWeaverPassword } from "@/lib/orb-weaver/password";
+import {
+  hashOrbWeaverPassword,
+  verifyOrbWeaverPassword,
+} from "@/lib/orb-weaver/password";
 
 export type OrbWeaverAuthenticatedUser = {
   id: string;
@@ -7,6 +11,16 @@ export type OrbWeaverAuthenticatedUser = {
 };
 
 const normalizeUsername = (username: string) => username.trim().toLowerCase();
+
+const hasMatchingBootstrapPassword = (password: string) => {
+  const bootstrapPassword = process.env.ORBW_BOOTSTRAP_ADMIN_PASSWORD;
+
+  if (!bootstrapPassword || password.length !== bootstrapPassword.length) {
+    return false;
+  }
+
+  return timingSafeEqual(Buffer.from(password), Buffer.from(bootstrapPassword));
+};
 
 export const authenticateOrbWeaverUser = async (
   username: string,
@@ -24,7 +38,31 @@ export const authenticateOrbWeaverUser = async (
     select: { id: true, passwordHash: true, role: true, isActive: true },
   });
 
-  if (!user || !user.isActive) {
+  if (!user) {
+    const bootstrapUsername = normalizeUsername(
+      process.env.ORBW_BOOTSTRAP_ADMIN_USERNAME || "admin"
+    );
+
+    if (
+      normalizedUsername !== bootstrapUsername ||
+      !hasMatchingBootstrapPassword(password)
+    ) {
+      return null;
+    }
+
+    const createdUser = await database.orbWeaverUser.create({
+      data: {
+        username: bootstrapUsername,
+        passwordHash: await hashOrbWeaverPassword(password),
+        role: "ADMIN",
+      },
+      select: { id: true, role: true },
+    });
+
+    return { id: createdUser.id, role: createdUser.role };
+  }
+
+  if (!user.isActive) {
     return null;
   }
 
