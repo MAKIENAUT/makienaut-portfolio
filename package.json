@@ -1,48 +1,33 @@
 {
-  "name": "makienaut-portfolio",
+  "name": "makienaut-monorepo",
   "version": "0.1.0",
   "private": true,
   "engines": {
     "node": ">=20.19"
   },
+  "packageManager": "npm@9.2.0",
+  "workspaces": [
+    "apps/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "vercel-build": "prisma generate && prisma migrate deploy && next build",
-    "start": "next start",
-    "lint": "eslint . --max-warnings=0",
-    "postinstall": "prisma generate",
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
-    "db:deploy": "prisma migrate deploy",
-    "db:status": "prisma migrate status",
-    "env:dev:pull": "npx --yes vercel env pull .env.local --environment=development --yes",
-    "dev:setup": "npm run env:dev:pull && npm run db:deploy && npm run db:generate",
-    "db:studio": "prisma studio",
-    "auth:admin:create": "node scripts/create-orb-admin.mjs"
-  },
-  "dependencies": {
-    "@prisma/adapter-pg": "^7.9.0",
-    "@prisma/client": "^7.9.0",
-    "dotenv": "^17.4.2",
-    "leaflet": "^1.9.4",
-    "next": "15.5.21",
-    "pg": "^8.22.0",
-    "react": "19.1.9",
-    "react-dom": "19.1.9",
-    "react-icons": "^5.5.0"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "test": "turbo test",
+    "lint": "turbo lint",
+    "dev:portfolio": "npm run dev --workspace=portfolio",
+    "dev:vroombroom": "npm run dev --workspace=vroombroom",
+    "dev:bonelessexpress": "npm run dev --workspace=bonelessexpress",
+    "dev:bangusexpress": "npm run dev --workspace=bonelessexpress",
+    "build:portfolio": "npm run build --workspace=portfolio",
+    "build:vroombroom": "npm run build --workspace=vroombroom",
+    "build:bonelessexpress": "npm run build --workspace=bonelessexpress",
+    "build:bangusexpress": "npm run build --workspace=bonelessexpress",
+    "test:vroombroom": "npm run test --workspace=vroombroom",
+    "test:bonelessexpress": "npm run test --workspace=bonelessexpress",
+    "test:bangusexpress": "npm run test --workspace=bonelessexpress",
+    "postinstall": "npm run --workspaces --if-present postinstall"
   },
   "devDependencies": {
-    "@types/leaflet": "^1.9.21",
-    "@types/node": "^20",
-    "@types/pg": "^8.20.0",
-    "@types/react": "19.1.17",
-    "@types/react-dom": "19.1.11",
-    "eslint": "^8",
-    "eslint-config-next": "15.5.21",
-    "postcss": "^8",
-    "prisma": "^7.9.0",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "turbo": "^2.11.10"
   }
 }

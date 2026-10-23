@@ -2,6 +2,8 @@
 
 # dependencies
 /node_modules
+node_modules/
+.vite/
 /.pnp
 .pnp.js
 .yarn/install-state.gz
@@ -10,9 +12,11 @@
 /coverage
 
 # next.js
-/.next/
-/.next-dev/
-/out/
+.next/
+.next-dev/
+out/
+apps/*/.next/
+apps/*/.next-dev/
 
 # production
 /build
@@ -42,3 +46,4 @@ next-env.d.ts
 
 # claude
 .claude/settings.local.json
+.turbo
